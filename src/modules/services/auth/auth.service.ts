@@ -51,11 +51,11 @@ export class AuthService {
         }
 
         const salt = await bcrypt.genSalt();
-        console.log('--- REGISTER DEBUG ---');
-        console.log(`Registering user: ${dto.username}`);
-        console.log(`Password to hash: '${dto.password}' (Length: ${dto.password.length})`);
+        // console.log('--- REGISTER DEBUG ---');
+        // console.log(`Registering user: ${dto.username}`);
+        // console.log(`Password to hash: '${dto.password}' (Length: ${dto.password.length})`);
         const passwordHash = await bcrypt.hash(dto.password, salt);
-        console.log('----------------------');
+        // console.log('----------------------');
 
         const newUser = this.userRepo.create({
             username: dto.username,
@@ -73,6 +73,8 @@ export class AuthService {
                 vehicle_plate: dto.vehicle_plate,
                 id_card_front: dto.id_card_front,
                 id_card_back: dto.id_card_back,
+                driver_license_front: dto.driver_license_front,
+                driver_license_back: dto.driver_license_back,
                 is_online: false,
                 wallet_balance: 0,
                 current_location: 'POINT(0 0)' as any,

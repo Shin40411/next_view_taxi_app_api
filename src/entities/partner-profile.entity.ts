@@ -19,6 +19,12 @@ export class PartnerProfile {
     @Column({ type: 'varchar', nullable: true })
     id_card_back: string | null;
 
+    @Column({ type: 'varchar', nullable: true })
+    driver_license_front: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    driver_license_back: string | null;
+
     @Column({ default: false })
     is_online: boolean;
 

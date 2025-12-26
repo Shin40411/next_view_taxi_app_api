@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto } from 'src/modules/dtos';
+import { CreateUserDto, UpdateUserDto } from 'src/modules/dtos';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { ServicePoint } from 'src/entities/service-point.entity';
@@ -113,5 +113,54 @@ export class AdminService {
         }
 
         return { message: 'User created successfully', userId: savedUser.id };
+    }
+
+    async updateUser(id: string, dto: UpdateUserDto) {
+        const user = await this.userRepo.findOne({
+            where: { id },
+            relations: ['partnerProfile', 'servicePoints']
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        // Update common fields
+        if (dto.full_name) user.full_name = dto.full_name;
+        // if (dto.is_active !== undefined) user.is_active = dto.is_active;
+        if (dto.password) {
+            user.password_hash = await bcrypt.hash(dto.password, 10);
+        }
+
+        await this.userRepo.save(user);
+
+        // Update Partner Profile
+        if (user.role === UserRole.PARTNER && user.partnerProfile) {
+            const profile = user.partnerProfile;
+            if (dto.vehicle_plate) profile.vehicle_plate = dto.vehicle_plate;
+            if (dto.driver_license_front) profile.driver_license_front = dto.driver_license_front;
+            if (dto.driver_license_back) profile.driver_license_back = dto.driver_license_back;
+            if (dto.id_card_front) profile.id_card_front = dto.id_card_front;
+            if (dto.id_card_back) profile.id_card_back = dto.id_card_back;
+
+            await this.profileRepo.save(profile);
+        }
+
+        // Update Service Point (Customer)
+        if (user.role === UserRole.CUSTOMER && user.servicePoints && user.servicePoints.length > 0) {
+            // Update the primary service point (first one)
+            const servicePoint = user.servicePoints[0];
+            if (dto.address) servicePoint.address = dto.address;
+            if (dto.reward_amount !== undefined) servicePoint.reward_amount = dto.reward_amount;
+            if (dto.advertising_budget !== undefined) servicePoint.advertising_budget = dto.advertising_budget;
+            if (dto.geofence_radius !== undefined) servicePoint.geofence_radius = dto.geofence_radius;
+            if (dto.latitude && dto.longitude) {
+                servicePoint.location = `POINT(${dto.latitude} ${dto.longitude})`;
+            }
+
+            await this.serviceRepo.save(servicePoint);
+        }
+
+        return { message: 'User updated successfully' };
     }
 }

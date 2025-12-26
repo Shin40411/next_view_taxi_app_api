@@ -9,5 +9,6 @@ export class CreateUserDto {
     id_card_front?: string;
     id_card_back?: string;
     tax_id?: string;
+    driver_license?: string;
     address?: string;
 }

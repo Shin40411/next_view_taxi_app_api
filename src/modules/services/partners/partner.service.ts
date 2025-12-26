@@ -93,7 +93,7 @@ export class PartnerService {
     async searchServicePoints(keyword: string) {
         return this.dataSource.getRepository(ServicePoint)
             .createQueryBuilder('sp')
-            .select(['sp.id', 'sp.name', 'sp.address', 'sp.reward_amount', 'sp.location']) // Lấy location để map zoom vào
+            .select(['sp.id', 'sp.name', 'sp.address', 'sp.reward_amount', 'sp.location', 'sp.advertising_budget']) // Lấy location để map zoom vào
             .where('sp.name LIKE :keyword', { keyword: `%${keyword}%` })
             // .andWhere('sp.is_active = :active', { active: true })
             .take(10)
@@ -119,7 +119,7 @@ export class PartnerService {
             partner: { id: partnerId },
             servicePoint: { id: servicePointId },
             guest_count: guestCount,
-            reward_snapshot: servicePoint.reward_amount,
+            reward_snapshot: Number(servicePoint.reward_amount) * guestCount,
             status: TripStatus.PENDING_CONFIRMATION,
             arrival_time: new Date()
         });

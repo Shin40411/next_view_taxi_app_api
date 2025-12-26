@@ -7,6 +7,7 @@ import { User } from './entities/user.entity';
 import { PartnerProfile } from './entities/partner-profile.entity';
 import { ServicePoint } from './entities/service-point.entity';
 import { Trip } from './entities/trip.entity';
+import { PointTransaction } from './entities/point-transaction.entity';
 import { SeedController } from './seed/seed.controller';
 import { TripsController } from './modules/controller/trips/trips.controller';
 import { TripsService } from './modules/services/trips/trips.service';
@@ -35,12 +36,12 @@ import { VietmapService } from './utils/vietmap.service';
       password: process.env.DB_PASSWORD!,
       database: process.env.DB_NAME || 'taxi_app_db',
 
-      entities: [User, PartnerProfile, ServicePoint, Trip],
+      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction],
       synchronize: true,
       legacySpatialSupport: false,
     }),
 
-    TypeOrmModule.forFeature([User, PartnerProfile, ServicePoint, Trip]),
+    TypeOrmModule.forFeature([User, PartnerProfile, ServicePoint, Trip, PointTransaction]),
     AuthModule
   ],
   controllers: [SeedController, TripsController, AdminController, PartnerController, CustomerController],

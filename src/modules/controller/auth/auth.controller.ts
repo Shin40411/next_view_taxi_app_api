@@ -14,9 +14,17 @@ export class AuthController {
     @UseInterceptors(FileFieldsInterceptor([
         { name: 'id_card_front', maxCount: 1 },
         { name: 'id_card_back', maxCount: 1 },
+        { name: 'driver_license_front', maxCount: 1 },
+        { name: 'driver_license_back', maxCount: 1 },
     ], {
         storage: diskStorage({
-            destination: './uploads/partners',
+            destination: (req, file, cb) => {
+                if (file.fieldname.startsWith('driver_license')) {
+                    cb(null, './uploads/driver_license');
+                } else {
+                    cb(null, './uploads/partners');
+                }
+            },
             filename: (req, file, cb) => {
                 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
                 const ext = extname(file.originalname);
@@ -26,13 +34,24 @@ export class AuthController {
     }))
     async register(
         @Body() body: RegisterDto,
-        @UploadedFiles() files: { id_card_front?: Express.Multer.File[], id_card_back?: Express.Multer.File[] },
+        @UploadedFiles() files: {
+            id_card_front?: Express.Multer.File[],
+            id_card_back?: Express.Multer.File[],
+            driver_license_front?: Express.Multer.File[],
+            driver_license_back?: Express.Multer.File[]
+        },
     ) {
         if (files?.id_card_front?.[0]) {
             body.id_card_front = files.id_card_front[0].path;
         }
         if (files?.id_card_back?.[0]) {
             body.id_card_back = files.id_card_back[0].path;
+        }
+        if (files?.driver_license_front?.[0]) {
+            body.driver_license_front = files.driver_license_front[0].path;
+        }
+        if (files?.driver_license_back?.[0]) {
+            body.driver_license_back = files.driver_license_back[0].path;
         }
         return this.authService.register(body);
     }

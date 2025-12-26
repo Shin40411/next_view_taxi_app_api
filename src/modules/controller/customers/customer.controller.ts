@@ -12,6 +12,16 @@ export class CustomerController {
         return this.customerService.getPendingTrips(req.user.sub);
     }
 
+    @Get('completed-requests')
+    async getCompletedRequests(@Request() req) {
+        return this.customerService.getCompletedTrips(req.user.sub);
+    }
+
+    @Get('rejected-requests')
+    async getRejectedRequests(@Request() req) {
+        return this.customerService.getRejectedTrips(req.user.sub);
+    }
+
     @Post('confirm-request/:tripId')
     async confirmRequest(@Request() req, @Param('tripId') tripId: string) {
         return this.customerService.confirmTrip(req.user.sub, tripId);
@@ -24,5 +34,10 @@ export class CustomerController {
         @Body('actualGuestCount') actualGuestCount: number
     ) {
         return this.customerService.rejectTrip(req.user.sub, tripId, actualGuestCount);
+    }
+    @Get('stats/budget')
+    @UseGuards(AuthGuard)
+    async getBudgetStats(@Request() req, @Query('range') range: string) {
+        return this.customerService.getBudgetStatistics(req.user.sub, range);
     }
 }
