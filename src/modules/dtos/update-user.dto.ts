@@ -7,6 +7,7 @@ export class UpdateUserDto {
 
     // Partner specific
     vehicle_plate?: string;
+    brand?: string;
     id_card_front?: string;
     id_card_back?: string;
     driver_license_front?: string;

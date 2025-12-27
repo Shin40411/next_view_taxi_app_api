@@ -4,7 +4,8 @@ import { ServicePoint } from 'src/entities/service-point.entity';
 import { Trip, TripStatus } from 'src/entities/trip.entity';
 import { User } from 'src/entities/user.entity';
 import { Repository, DataSource, In } from 'typeorm';
-import { PointTransaction, TransactionType } from 'src/entities/point-transaction.entity';
+import { PointTransaction } from 'src/entities/point-transaction.entity';
+import { TransactionType } from 'src/utils/point-transaction-enum';
 
 @Injectable()
 export class CustomerService {

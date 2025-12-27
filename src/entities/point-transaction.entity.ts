@@ -1,13 +1,9 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { ServicePoint } from './service-point.entity';
 import { Trip } from './trip.entity';
+import { TransactionType } from 'src/utils/point-transaction-enum';
 
-export enum TransactionType {
-    DEPOSIT = 'DEPOSIT',
-    TRIP_PAYMENT = 'TRIP_PAYMENT',
-    REFUND = 'REFUND',
-    ADJUSTMENT = 'ADJUSTMENT'
-}
+
 
 @Entity('point_transactions')
 export class PointTransaction {

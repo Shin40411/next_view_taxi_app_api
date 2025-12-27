@@ -6,6 +6,7 @@ export class CreateUserDto {
     full_name: string;
     role: UserRole;
     vehicle_plate?: string;
+    brand?: string;
     id_card_front?: string;
     id_card_back?: string;
     tax_id?: string;

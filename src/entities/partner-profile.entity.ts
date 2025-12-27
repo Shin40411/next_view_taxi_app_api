@@ -10,6 +10,9 @@ export class PartnerProfile {
     @JoinColumn({ name: 'user_id' })
     user: User;
 
+    @Column({ type: 'varchar', nullable: true })
+    brand: string | null;
+
     @Column()
     vehicle_plate: string;
 

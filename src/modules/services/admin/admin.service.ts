@@ -88,6 +88,7 @@ export class AdminService {
             const profile = this.profileRepo.create({
                 user: savedUser,
                 vehicle_plate: dto.vehicle_plate || 'Updating...',
+                brand: dto.brand || null,
                 id_card_front: dto.id_card_front,
                 id_card_back: dto.id_card_back,
                 is_online: false,
@@ -103,7 +104,7 @@ export class AdminService {
             const servicePoint = this.serviceRepo.create({
                 owner: savedUser,
                 name: dto.full_name,
-                address: dto.address || 'Updating...',
+                address: dto.address || 'Chưa cập nhật...',
                 reward_amount: 50000,
                 advertising_budget: 0,
                 geofence_radius: 100,
@@ -138,6 +139,7 @@ export class AdminService {
         if (user.role === UserRole.PARTNER && user.partnerProfile) {
             const profile = user.partnerProfile;
             if (dto.vehicle_plate) profile.vehicle_plate = dto.vehicle_plate;
+            if (dto.brand) profile.brand = dto.brand;
             if (dto.driver_license_front) profile.driver_license_front = dto.driver_license_front;
             if (dto.driver_license_back) profile.driver_license_back = dto.driver_license_back;
             if (dto.id_card_front) profile.id_card_front = dto.id_card_front;
