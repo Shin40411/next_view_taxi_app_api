@@ -31,9 +31,10 @@ export class CustomerController {
     async rejectRequest(
         @Request() req,
         @Param('tripId') tripId: string,
-        @Body('actualGuestCount') actualGuestCount: number
+        @Body('actualGuestCount') actualGuestCount: number,
+        @Body('reason') reason: string
     ) {
-        return this.customerService.rejectTrip(req.user.sub, tripId, actualGuestCount);
+        return this.customerService.rejectTrip(req.user.sub, tripId, actualGuestCount, reason);
     }
     @Get('stats/budget')
     @UseGuards(AuthGuard)

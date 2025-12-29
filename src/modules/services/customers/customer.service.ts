@@ -119,7 +119,7 @@ export class CustomerService {
         }
     }
 
-    async rejectTrip(ownerId: string, tripId: string, actualCount: number) {
+    async rejectTrip(ownerId: string, tripId: string, actualCount: number, reason?: string) {
         const trip = await this.tripRepo.findOne({
             where: { trip_id: tripId },
             relations: ['servicePoint', 'servicePoint.owner']
@@ -130,10 +130,11 @@ export class CustomerService {
 
         trip.status = TripStatus.REJECTED;
         trip.actual_guest_count = actualCount;
+        if (reason) trip.reject_reason = reason;
 
         await this.tripRepo.save(trip);
 
-        return { message: 'Đã huỷ đơn và gửi báo cáo lên Admin' };
+        return { message: 'Đã huỷ đơn!' };
     }
 
     async getBudgetStatistics(ownerId: string, range: string) {

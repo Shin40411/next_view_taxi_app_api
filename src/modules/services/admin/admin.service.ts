@@ -165,4 +165,123 @@ export class AdminService {
 
         return { message: 'User updated successfully' };
     }
+
+    async getPartnerStats(range: string) {
+        const query = this.tripRepo.createQueryBuilder('trip')
+            .leftJoinAndSelect('trip.partner', 'partner')
+            .where('trip.status NOT IN (:...statuses)', { statuses: [TripStatus.PENDING_CONFIRMATION, TripStatus.REJECTED] })
+            .select([
+                'partner.id',
+                'partner.full_name',
+                'COUNT(trip.trip_id) as totalTrips',
+                'SUM(trip.actual_guest_count) as totalGuests',
+                'SUM(trip.reward_snapshot) as totalPoints'
+            ])
+            .groupBy('partner.id')
+            .addGroupBy('partner.full_name');
+
+        const now = new Date();
+        let startDate: Date | undefined;
+        let endDate: Date | undefined;
+
+        switch (range) {
+            case 'today':
+                startDate = new Date(now.setHours(0, 0, 0, 0));
+                endDate = new Date(now.setHours(23, 59, 59, 999));
+                break;
+            case 'yesterday':
+                const yesterday = new Date(now);
+                yesterday.setDate(now.getDate() - 1);
+                startDate = new Date(yesterday.setHours(0, 0, 0, 0));
+                endDate = new Date(yesterday.setHours(23, 59, 59, 999));
+                break;
+            case '7_last_days':
+                const sevenDaysAgo = new Date(now);
+                sevenDaysAgo.setDate(now.getDate() - 7);
+                startDate = new Date(sevenDaysAgo.setHours(0, 0, 0, 0));
+                endDate = new Date();
+                break;
+            case 'this_month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                break;
+            default:
+                break;
+        }
+
+        if (startDate && endDate) {
+            query.andWhere('trip.updated_at BETWEEN :startDate AND :endDate', { startDate, endDate });
+        }
+
+        query.limit(3);
+
+        const stats = await query.getRawMany();
+
+        return stats.map(stat => ({
+            partnerId: stat.partner_id,
+            partnerName: stat.partner_full_name,
+            totalTrips: Number(stat.totalTrips),
+            totalGuests: Number(stat.totalGuests) || 0,
+            totalPoints: Number(stat.totalPoints) || 0,
+        }));
+    }
+
+    async getServicePointStats(range: string) {
+        const query = this.tripRepo.createQueryBuilder('trip')
+            .leftJoinAndSelect('trip.servicePoint', 'servicePoint')
+            .select([
+                'servicePoint.id',
+                'servicePoint.name',
+                'COUNT(trip.trip_id) as totalTrips',
+                'SUM(trip.actual_guest_count) as totalGuests',
+                `SUM(CASE WHEN trip.status != '${TripStatus.REJECTED}' THEN trip.reward_snapshot ELSE 0 END) as totalPoints`
+            ])
+            .groupBy('servicePoint.id')
+            .addGroupBy('servicePoint.name');
+
+        const now = new Date();
+        let startDate: Date | undefined;
+        let endDate: Date | undefined;
+
+        switch (range) {
+            case 'today':
+                startDate = new Date(now.setHours(0, 0, 0, 0));
+                endDate = new Date(now.setHours(23, 59, 59, 999));
+                break;
+            case 'yesterday':
+                const yesterday = new Date(now);
+                yesterday.setDate(now.getDate() - 1);
+                startDate = new Date(yesterday.setHours(0, 0, 0, 0));
+                endDate = new Date(yesterday.setHours(23, 59, 59, 999));
+                break;
+            case '7_last_days':
+                const sevenDaysAgo = new Date(now);
+                sevenDaysAgo.setDate(now.getDate() - 7);
+                startDate = new Date(sevenDaysAgo.setHours(0, 0, 0, 0));
+                endDate = new Date();
+                break;
+            case 'this_month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                break;
+            default:
+                break;
+        }
+
+        if (startDate && endDate) {
+            query.andWhere('trip.created_at BETWEEN :startDate AND :endDate', { startDate, endDate });
+        }
+
+        query.limit(3);
+
+        const stats = await query.getRawMany();
+
+        return stats.map(stat => ({
+            servicePointId: stat.servicePoint_id,
+            servicePointName: stat.servicePoint_name,
+            totalTrips: Number(stat.totalTrips),
+            totalGuests: Number(stat.totalGuests) || 0,
+            totalCost: Number(stat.totalPoints) || 0,
+        }));
+    }
 }

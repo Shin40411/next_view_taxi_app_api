@@ -44,4 +44,7 @@ export class Trip {
 
     @Column({ nullable: true })
     arrival_time: Date;
+
+    @Column({ type: 'text', nullable: true })
+    reject_reason: string;
 }

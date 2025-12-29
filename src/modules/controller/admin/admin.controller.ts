@@ -70,4 +70,14 @@ export class AdminController {
 
         return this.adminService.updateUser(id, body);
     }
+
+    @Get('stats/partners')
+    async getPartnerStats(@Query('range') range: string) {
+        return this.adminService.getPartnerStats(range);
+    }
+
+    @Get('stats/customers')
+    async getServicePointStats(@Query('range') range: string) {
+        return this.adminService.getServicePointStats(range);
+    }
 }
