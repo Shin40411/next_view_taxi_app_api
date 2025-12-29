@@ -2,7 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { ServicePoint } from 'src/entities/service-point.entity';
-import { Trip, TripStatus } from 'src/entities/trip.entity';
+import { Trip } from 'src/entities/trip.entity';
+import { TripStatus } from 'src/utils/trips-status-enum';
 import { Repository, Between, DataSource } from 'typeorm';
 
 @Injectable()
@@ -121,12 +122,54 @@ export class PartnerService {
             guest_count: guestCount,
             reward_snapshot: Number(servicePoint.reward_amount) * guestCount,
             status: TripStatus.PENDING_CONFIRMATION,
-            arrival_time: new Date()
         });
 
         await this.tripRepo.save(newTrip);
 
         return { message: 'Yêu cầu của bạn đã được gửi đi', trip_id: newTrip.trip_id };
+    }
+
+    async confirmArrival(partnerId: string, tripId: string) {
+        const trip = await this.tripRepo.findOne({
+            where: {
+                trip_id: tripId,
+                partner: { id: partnerId }
+            }
+        });
+
+        if (!trip) throw new NotFoundException('Đơn không tồn tại');
+
+        if (trip.status !== TripStatus.PENDING_CONFIRMATION) {
+            throw new BadRequestException('Trạng thái đơn không hợp lệ để xác nhận đến');
+        }
+
+        trip.status = TripStatus.ARRIVED;
+        trip.arrival_time = new Date();
+
+        await this.tripRepo.save(trip);
+
+        return { message: 'Đã xác nhận đến điểm phục vụ' };
+    }
+
+    async cancelTrip(partnerId: string, tripId: string, reason?: string) {
+        const trip = await this.tripRepo.findOne({
+            where: {
+                trip_id: tripId,
+                partner: { id: partnerId }
+            }
+        });
+
+        if (!trip) throw new NotFoundException('Đơn không tồn tại');
+
+        if (trip.status !== TripStatus.PENDING_CONFIRMATION && trip.status !== TripStatus.ARRIVED) {
+            throw new BadRequestException('Không thể huỷ đơn ở trạng thái này');
+        }
+
+        trip.status = TripStatus.CANCELLED;
+        if (reason) trip.reject_reason = reason; // Reuse reject_reason for cancellation reason
+        await this.tripRepo.save(trip);
+
+        return { message: 'Đã huỷ đơn thành công' };
     }
 
     async getMyTripRequests(partnerId: string) {
@@ -145,6 +188,7 @@ export class PartnerService {
             status: trip.status,
             reward_goxu: Number(trip.reward_snapshot),
             created_at: trip.created_at,
+            arrival_time: trip.arrival_time,
         }));
     }
 }

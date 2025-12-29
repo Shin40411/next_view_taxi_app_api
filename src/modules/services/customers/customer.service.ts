@@ -1,11 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ServicePoint } from 'src/entities/service-point.entity';
-import { Trip, TripStatus } from 'src/entities/trip.entity';
+import { Trip } from 'src/entities/trip.entity';
 import { User } from 'src/entities/user.entity';
 import { Repository, DataSource, In } from 'typeorm';
 import { PointTransaction } from 'src/entities/point-transaction.entity';
 import { TransactionType } from 'src/utils/point-transaction-enum';
+import { TripStatus } from 'src/utils/trips-status-enum';
 
 @Injectable()
 export class CustomerService {
@@ -17,6 +18,22 @@ export class CustomerService {
         @InjectRepository(PointTransaction) private transactionRepo: Repository<PointTransaction>,
         private dataSource: DataSource,
     ) { }
+
+    async getArrivedTrips(ownerId: string) {
+        const myShops = await this.serviceRepo.find({ where: { owner: { id: ownerId } } });
+        const shopIds = myShops.map(shop => shop.id);
+
+        if (shopIds.length === 0) return [];
+
+        return this.tripRepo.find({
+            where: {
+                servicePoint: { id: In(shopIds) },
+                status: TripStatus.ARRIVED
+            },
+            relations: ['partner', 'partner.partnerProfile'],
+            order: { updated_at: 'DESC' }
+        });
+    }
 
     async getCompletedTrips(ownerId: string) {
         const myShops = await this.serviceRepo.find({ where: { owner: { id: ownerId } } });
@@ -68,6 +85,22 @@ export class CustomerService {
         });
     }
 
+    async getCancelledTrips(ownerId: string) {
+        const myShops = await this.serviceRepo.find({ where: { owner: { id: ownerId } } });
+        const shopIds = myShops.map(shop => shop.id);
+
+        if (shopIds.length === 0) return [];
+
+        return this.tripRepo.find({
+            where: {
+                servicePoint: { id: In(shopIds) },
+                status: TripStatus.CANCELLED
+            },
+            relations: ['partner', 'partner.partnerProfile'],
+            order: { updated_at: 'DESC' }
+        });
+    }
+
     async confirmTrip(ownerId: string, tripId: string) {
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
@@ -81,7 +114,12 @@ export class CustomerService {
             });
 
             if (!trip) throw new BadRequestException('Đơn không tồn tại');
-            if (trip.status !== TripStatus.PENDING_CONFIRMATION) throw new BadRequestException('Đơn đã được xử lý');
+
+            // Only allow confirmation if the driver has ARRIVED
+            if (trip.status !== TripStatus.ARRIVED) {
+                throw new BadRequestException('Tài xế chưa xác nhận đến hoặc đơn đã được xử lý');
+            }
+
             if (trip.servicePoint.owner.id !== ownerId) throw new ForbiddenException('Bạn không sở hữu quán này');
 
             const rewardAmount = trip.reward_snapshot;
@@ -182,7 +220,7 @@ export class CustomerService {
             .reduce((sum, t) => sum + Number(t.amount), 0);
 
         return {
-            totalSpent // Returns net change (+ or -)
+            totalSpent
         };
     }
 }

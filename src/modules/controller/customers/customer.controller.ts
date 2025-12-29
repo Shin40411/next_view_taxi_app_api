@@ -12,6 +12,11 @@ export class CustomerController {
         return this.customerService.getPendingTrips(req.user.sub);
     }
 
+    @Get('arrived-requests')
+    async getArrivedRequests(@Request() req) {
+        return this.customerService.getArrivedTrips(req.user.sub);
+    }
+
     @Get('completed-requests')
     async getCompletedRequests(@Request() req) {
         return this.customerService.getCompletedTrips(req.user.sub);
@@ -20,6 +25,11 @@ export class CustomerController {
     @Get('rejected-requests')
     async getRejectedRequests(@Request() req) {
         return this.customerService.getRejectedTrips(req.user.sub);
+    }
+
+    @Get('cancelled-requests')
+    async getCancelledRequests(@Request() req) {
+        return this.customerService.getCancelledTrips(req.user.sub);
     }
 
     @Post('confirm-request/:tripId')

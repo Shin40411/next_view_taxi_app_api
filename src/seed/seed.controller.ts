@@ -7,8 +7,9 @@ import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { PartnerProfile } from '../entities/partner-profile.entity';
 import { ServicePoint } from '../entities/service-point.entity';
-import { Trip, TripStatus } from '../entities/trip.entity';
+import { Trip } from '../entities/trip.entity';
 import { UserRole } from 'src/utils/user-role.enum';
+import { TripStatus } from 'src/utils/trips-status-enum';
 
 @Controller('seed')
 export class SeedController {
@@ -57,7 +58,7 @@ export class SeedController {
         const trip = this.tripRepo.create({
             partner: partnerUser,
             servicePoint: restaurant,
-            status: TripStatus.ON_ROUTE,
+            status: TripStatus.PENDING_CONFIRMATION,
         });
         await this.tripRepo.save(trip);
 

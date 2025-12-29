@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { PartnerService } from 'src/modules/services/partners/partner.service';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 
@@ -26,6 +26,23 @@ export class PartnerController {
         @Body() body: { servicePointId: string; guestCount: number }
     ) {
         return this.partnerService.createTripRequest(req.user.sub, body.servicePointId, body.guestCount);
+    }
+
+    @Post('confirm-arrival/:tripId')
+    async confirmArrival(
+        @Request() req,
+        @Param('tripId') tripId: string
+    ) {
+        return this.partnerService.confirmArrival(req.user.sub, tripId);
+    }
+
+    @Post('cancel-request/:tripId')
+    async cancelRequest(
+        @Request() req,
+        @Param('tripId') tripId: string,
+        @Body('reason') reason: string
+    ) {
+        return this.partnerService.cancelTrip(req.user.sub, tripId, reason);
     }
 
     @Get('search-destination')

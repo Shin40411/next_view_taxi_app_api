@@ -1,15 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn, UpdateDateColumn } from 'typeorm';
 import { User } from './user.entity';
 import { ServicePoint } from './service-point.entity';
-
-export enum TripStatus {
-    ON_ROUTE = 'ON_ROUTE',
-    ARRIVED = 'ARRIVED',
-    CANCELLED = 'CANCELLED',
-    PENDING_CONFIRMATION = 'PENDING_CONFIRMATION',
-    COMPLETED = 'COMPLETED',
-    REJECTED = 'REJECTED',
-}
+import { TripStatus } from 'src/utils/trips-status-enum';
 
 @Entity('trips')
 export class Trip {

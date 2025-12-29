@@ -51,11 +51,7 @@ export class AuthService {
         }
 
         const salt = await bcrypt.genSalt();
-        // console.log('--- REGISTER DEBUG ---');
-        // console.log(`Registering user: ${dto.username}`);
-        // console.log(`Password to hash: '${dto.password}' (Length: ${dto.password.length})`);
         const passwordHash = await bcrypt.hash(dto.password, salt);
-        // console.log('----------------------');
 
         const newUser = this.userRepo.create({
             username: dto.username,
@@ -67,14 +63,16 @@ export class AuthService {
 
         const savedUser = await this.userRepo.save(newUser);
 
-        if (dto.role === UserRole.PARTNER) {
+        // Handle PARTNER or INTRODUCER profile creation
+        if (dto.role === UserRole.PARTNER || dto.role === UserRole.INTRODUCER) {
             const profile = this.profileRepo.create({
                 user: savedUser,
-                vehicle_plate: dto.vehicle_plate,
-                id_card_front: dto.id_card_front,
-                id_card_back: dto.id_card_back,
-                driver_license_front: dto.driver_license_front,
-                driver_license_back: dto.driver_license_back,
+                // Only PARTNER requires these; INTRODUCER might not have them
+                vehicle_plate: dto.role === UserRole.PARTNER ? dto.vehicle_plate : (dto.vehicle_plate || 'No Plate'),
+                id_card_front: dto.id_card_front || null,
+                id_card_back: dto.id_card_back || null,
+                driver_license_front: dto.driver_license_front || null,
+                driver_license_back: dto.driver_license_back || null,
                 is_online: false,
                 wallet_balance: 0,
                 current_location: 'POINT(0 0)' as any,

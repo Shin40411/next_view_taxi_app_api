@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PartnerProfile } from 'src/entities/partner-profile.entity';
-import { Trip, TripStatus } from 'src/entities/trip.entity';
+import { Trip } from 'src/entities/trip.entity';
 import { Repository } from 'typeorm';
 
 @Injectable()

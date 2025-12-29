@@ -11,5 +11,12 @@ export class CreateUserDto {
     id_card_back?: string;
     tax_id?: string;
     driver_license?: string;
+    driver_license_front?: string;
+    driver_license_back?: string;
     address?: string;
+    latitude?: number;
+    longitude?: number;
+    geofence_radius?: number;
+    reward_amount?: number;
+    is_active?: boolean;
 }

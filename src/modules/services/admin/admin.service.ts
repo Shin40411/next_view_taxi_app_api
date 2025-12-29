@@ -4,10 +4,11 @@ import { CreateUserDto, UpdateUserDto } from 'src/modules/dtos';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { ServicePoint } from 'src/entities/service-point.entity';
-import { Trip, TripStatus } from 'src/entities/trip.entity';
+import { Trip } from 'src/entities/trip.entity';
 import { User } from 'src/entities/user.entity';
 import { UserRole } from 'src/utils/user-role.enum';
 import { Repository, Raw } from 'typeorm';
+import { TripStatus } from 'src/utils/trips-status-enum';
 
 @Injectable()
 export class AdminService {
@@ -84,13 +85,16 @@ export class AdminService {
         const savedUser = await this.userRepo.save(newUser);
 
         // If creating a PARTNER, create a profile
-        if (dto.role === UserRole.PARTNER) {
+        // If creating a PARTNER or INTRODUCER, create a profile
+        if (dto.role === UserRole.PARTNER || dto.role === UserRole.INTRODUCER) {
             const profile = this.profileRepo.create({
                 user: savedUser,
-                vehicle_plate: dto.vehicle_plate || 'Updating...',
+                vehicle_plate: dto.role === UserRole.PARTNER ? (dto.vehicle_plate || 'Updating...') : (dto.vehicle_plate || 'No Plate'),
                 brand: dto.brand || null,
-                id_card_front: dto.id_card_front,
-                id_card_back: dto.id_card_back,
+                id_card_front: dto.id_card_front || null,
+                id_card_back: dto.id_card_back || null,
+                driver_license_front: dto.driver_license_front || null,
+                driver_license_back: dto.driver_license_back || null,
                 is_online: false,
                 wallet_balance: 0,
                 // Default location (e.g., center of HCMC)
@@ -101,19 +105,22 @@ export class AdminService {
 
         // If creating a CUSTOMER, create a default service point
         if (dto.role === UserRole.CUSTOMER) {
+            const latitude = dto.latitude || 10.776111;
+            const longitude = dto.longitude || 106.701111;
+
             const servicePoint = this.serviceRepo.create({
                 owner: savedUser,
                 name: dto.full_name,
                 address: dto.address || 'Chưa cập nhật...',
-                reward_amount: 50000,
+                reward_amount: dto.reward_amount !== undefined ? Number(dto.reward_amount) : 50000,
                 advertising_budget: 0,
-                geofence_radius: 100,
-                location: 'POINT(10.776111 106.701111)',
+                geofence_radius: dto.geofence_radius !== undefined ? Number(dto.geofence_radius) : 100,
+                location: `POINT(${latitude} ${longitude})`,
             });
             await this.serviceRepo.save(servicePoint);
         }
 
-        return { message: 'User created successfully', userId: savedUser.id };
+        return { message: 'Tạo tài khoản thành công', userId: savedUser.id };
     }
 
     async updateUser(id: string, dto: UpdateUserDto) {
@@ -135,8 +142,8 @@ export class AdminService {
 
         await this.userRepo.save(user);
 
-        // Update Partner Profile
-        if (user.role === UserRole.PARTNER && user.partnerProfile) {
+        // Update Partner/Introducer Profile
+        if ((user.role === UserRole.PARTNER || user.role === UserRole.INTRODUCER) && user.partnerProfile) {
             const profile = user.partnerProfile;
             if (dto.vehicle_plate) profile.vehicle_plate = dto.vehicle_plate;
             if (dto.brand) profile.brand = dto.brand;

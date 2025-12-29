@@ -13,7 +13,7 @@ export class PartnerProfile {
     @Column({ type: 'varchar', nullable: true })
     brand: string | null;
 
-    @Column()
+    @Column({ nullable: true })
     vehicle_plate: string;
 
     @Column({ type: 'varchar', nullable: true })
