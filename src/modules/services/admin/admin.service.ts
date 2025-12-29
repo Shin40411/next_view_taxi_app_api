@@ -7,7 +7,7 @@ import { ServicePoint } from 'src/entities/service-point.entity';
 import { Trip } from 'src/entities/trip.entity';
 import { User } from 'src/entities/user.entity';
 import { UserRole } from 'src/utils/user-role.enum';
-import { Repository, Raw } from 'typeorm';
+import { Repository } from 'typeorm';
 import { TripStatus } from 'src/utils/trips-status-enum';
 
 @Injectable()
@@ -70,7 +70,7 @@ export class AdminService {
 
         const existingUser = await this.userRepo.findOne({ where: { username: dto.username } });
         if (existingUser) {
-            throw new BadRequestException('Username already exists');
+            throw new BadRequestException('Thông tin tài khoản đã tồn tại');
         }
 
         const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -97,8 +97,7 @@ export class AdminService {
                 driver_license_back: dto.driver_license_back || null,
                 is_online: false,
                 wallet_balance: 0,
-                // Default location (e.g., center of HCMC)
-                current_location: Raw(() => "ST_GeomFromText('POINT(10.776111 106.701111)', 4326)") as any,
+                current_location: 'POINT(10.776111 106.701111)',
             });
             await this.profileRepo.save(profile);
         }
