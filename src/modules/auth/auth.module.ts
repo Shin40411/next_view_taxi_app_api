@@ -6,6 +6,7 @@ import { User } from 'src/entities/user.entity';
 import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { ServicePoint } from 'src/entities/service-point.entity';
 import { AuthService } from '../services/auth/auth.service';
+import { ZaloService } from '../services/zalo/zalo.service';
 import { AuthController } from '../controller/auth/auth.controller';
 
 @Module({
@@ -13,7 +14,7 @@ import { AuthController } from '../controller/auth/auth.controller';
         TypeOrmModule.forFeature([User, PartnerProfile, ServicePoint]),
         ConfigModule,
     ],
-    providers: [AuthService, AuthGuard],
+    providers: [AuthService, AuthGuard, ZaloService],
     controllers: [AuthController],
     exports: [AuthService],
 })

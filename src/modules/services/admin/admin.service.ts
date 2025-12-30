@@ -208,19 +208,26 @@ export class AdminService {
         return { message: 'Cập nhật thông tin thành công' };
     }
 
-    async getPartnerStats(range: string) {
+    async getPartnerStats(range: string, page: number = 1, limit: number = 10) {
         const query = this.tripRepo.createQueryBuilder('trip')
             .leftJoinAndSelect('trip.partner', 'partner')
+            .leftJoinAndSelect('partner.bankAccount', 'bankAccount')
             .where('trip.status NOT IN (:...statuses)', { statuses: [TripStatus.PENDING_CONFIRMATION, TripStatus.REJECTED] })
             .select([
                 'partner.id',
                 'partner.full_name',
+                'bankAccount.bank_name',
+                'bankAccount.account_number',
+                'bankAccount.account_holder_name',
                 'COUNT(trip.trip_id) as totalTrips',
                 'SUM(trip.actual_guest_count) as totalGuests',
                 'SUM(trip.reward_snapshot) as totalPoints'
             ])
             .groupBy('partner.id')
-            .addGroupBy('partner.full_name');
+            .addGroupBy('partner.full_name')
+            .addGroupBy('bankAccount.bank_name')
+            .addGroupBy('bankAccount.account_number')
+            .addGroupBy('bankAccount.account_holder_name');
 
         const now = new Date();
         let startDate: Date | undefined;
@@ -255,31 +262,56 @@ export class AdminService {
             query.andWhere('trip.updated_at BETWEEN :startDate AND :endDate', { startDate, endDate });
         }
 
-        query.limit(3);
+        const totalQuery = query.clone();
+        totalQuery.limit(undefined);
+        totalQuery.offset(undefined);
+        // Remove ordering if any to speed up count
+
+        // Complex count with group by is tricky in TypeORM
+        // Simple way: get list of distinct IDs matching criteria
+        const total = (await totalQuery.getRawMany()).length;
+
+        if (limit > 0) {
+            query.skip((page - 1) * limit);
+            query.take(limit);
+        }
 
         const stats = await query.getRawMany();
 
-        return stats.map(stat => ({
+        const data = stats.map(stat => ({
             partnerId: stat.partner_id,
             partnerName: stat.partner_full_name,
             totalTrips: Number(stat.totalTrips),
             totalGuests: Number(stat.totalGuests) || 0,
             totalPoints: Number(stat.totalPoints) || 0,
+            bankName: stat.bankAccount_bank_name || '',
+            accountNumber: stat.bankAccount_account_number || '',
+            accountHolderName: stat.bankAccount_account_holder_name || '',
         }));
+
+        return { data, total };
     }
 
-    async getServicePointStats(range: string) {
+    async getServicePointStats(range: string, page: number = 1, limit: number = 10) {
         const query = this.tripRepo.createQueryBuilder('trip')
             .leftJoinAndSelect('trip.servicePoint', 'servicePoint')
+            .leftJoinAndSelect('servicePoint.owner', 'owner')
+            .leftJoinAndSelect('owner.bankAccount', 'bankAccount')
             .select([
                 'servicePoint.id',
                 'servicePoint.name',
+                'bankAccount.bank_name',
+                'bankAccount.account_number',
+                'bankAccount.account_holder_name',
                 'COUNT(trip.trip_id) as totalTrips',
                 'SUM(trip.actual_guest_count) as totalGuests',
                 `SUM(CASE WHEN trip.status != '${TripStatus.REJECTED}' THEN trip.reward_snapshot ELSE 0 END) as totalPoints`
             ])
             .groupBy('servicePoint.id')
-            .addGroupBy('servicePoint.name');
+            .addGroupBy('servicePoint.name')
+            .addGroupBy('bankAccount.bank_name')
+            .addGroupBy('bankAccount.account_number')
+            .addGroupBy('bankAccount.account_holder_name');
 
         const now = new Date();
         let startDate: Date | undefined;
@@ -314,16 +346,29 @@ export class AdminService {
             query.andWhere('trip.created_at BETWEEN :startDate AND :endDate', { startDate, endDate });
         }
 
-        query.limit(3);
+        const totalQuery = query.clone();
+        totalQuery.limit(undefined);
+        totalQuery.offset(undefined);
+        const total = (await totalQuery.getRawMany()).length;
+
+        if (limit > 0) {
+            query.skip((page - 1) * limit);
+            query.take(limit);
+        }
 
         const stats = await query.getRawMany();
 
-        return stats.map(stat => ({
+        const data = stats.map(stat => ({
             servicePointId: stat.servicePoint_id,
             servicePointName: stat.servicePoint_name,
             totalTrips: Number(stat.totalTrips),
             totalGuests: Number(stat.totalGuests) || 0,
             totalCost: Number(stat.totalPoints) || 0,
+            bankName: stat.bankAccount_bank_name || '',
+            accountNumber: stat.bankAccount_account_number || '',
+            accountHolderName: stat.bankAccount_account_holder_name || '',
         }));
+
+        return { data, total };
     }
 }

@@ -108,12 +108,20 @@ export class AdminController {
     }
 
     @Get('stats/partners')
-    async getPartnerStats(@Query('range') range: string) {
-        return this.adminService.getPartnerStats(range);
+    async getPartnerStats(
+        @Query('range') range: string,
+        @Query('page') page: number,
+        @Query('limit') limit: number
+    ) {
+        return this.adminService.getPartnerStats(range, Number(page) || 1, Number(limit) || 10);
     }
 
     @Get('stats/customers')
-    async getServicePointStats(@Query('range') range: string) {
-        return this.adminService.getServicePointStats(range);
+    async getServicePointStats(
+        @Query('range') range: string,
+        @Query('page') page: number,
+        @Query('limit') limit: number
+    ) {
+        return this.adminService.getServicePointStats(range, Number(page) || 1, Number(limit) || 10);
     }
 }

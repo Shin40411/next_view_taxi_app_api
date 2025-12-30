@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { V2, V3, V4 } from 'paseto';
 import Redis from 'ioredis';
 import * as bcrypt from 'bcrypt';
@@ -11,6 +11,8 @@ import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { User } from 'src/entities/user.entity';
 import { RegisterDto } from 'src/modules/dtos';
 
+import { ZaloService } from 'src/modules/services/zalo/zalo.service';
+
 @Injectable()
 export class AuthService {
     private readonly redis = new Redis({ host: 'localhost', port: 6379 });
@@ -21,6 +23,7 @@ export class AuthService {
         @InjectRepository(PartnerProfile) private profileRepo: Repository<PartnerProfile>,
         @InjectRepository(ServicePoint) private serviceRepo: Repository<ServicePoint>,
         private configService: ConfigService,
+        private zaloService: ZaloService,
     ) {
         const keyHex = this.configService.get<string>('PASETO_SECRET');
         if (!keyHex) {
@@ -144,5 +147,47 @@ export class AuthService {
         } catch (e) {
             return null;
         }
+    }
+
+    async requestPasswordReset(username: string) {
+        const user = await this.userRepo.findOne({ where: { username } });
+        if (!user) throw new NotFoundException('Số điện thoại chưa được đăng ký');
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        await this.redis.set(`reset_otp:${username}`, otp, 'EX', 300);
+
+        const templateId = this.configService.get<string>('ZALO_TEMPLATE_ID_OTP');
+        if (!templateId) {
+            throw new Error('Missing ZALO_TEMPLATE_ID_OTP configuration');
+        }
+
+        await this.zaloService.sendZns(username, templateId, {
+            otp: otp,
+            customer_name: user.full_name
+        });
+
+        return { message: 'Mã OTP đã được gửi qua Zalo' };
+    }
+
+    async confirmPasswordReset(username: string, otp: string, newPassword: string) {
+        const storedOtp = await this.redis.get(`reset_otp:${username}`);
+
+        if (!storedOtp || storedOtp !== otp) {
+            throw new BadRequestException('Mã OTP không chính xác hoặc đã hết hạn');
+        }
+
+        const user = await this.userRepo.findOne({ where: { username } });
+        if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+        const salt = await bcrypt.genSalt();
+        const passwordHash = await bcrypt.hash(newPassword, salt);
+
+        user.password_hash = passwordHash;
+        await this.userRepo.save(user);
+
+        await this.redis.del(`reset_otp:${username}`);
+
+        return { message: 'Đổi mật khẩu thành công' };
     }
 }
