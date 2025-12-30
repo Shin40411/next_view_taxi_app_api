@@ -17,8 +17,10 @@ export class AdminController {
         @Query('role') role: UserRole,
         @Query('page') page: number,
         @Query('limit') limit: number,
+        @Query('search') search?: string,
+        @Query('province') province?: string,
     ) {
-        return this.adminService.getUsers(role, Number(page) || 1, Number(limit) || 10);
+        return this.adminService.getUsers(role, Number(page) || 1, Number(limit) || 10, search, province);
     }
 
     @Get('users/:id')
@@ -59,6 +61,8 @@ export class AdminController {
     ) {
         if (files?.id_card_front?.[0]) body.id_card_front = files.id_card_front[0].path;
         if (files?.id_card_back?.[0]) body.id_card_back = files.id_card_back[0].path;
+        if (files?.driver_license_front?.[0]) body.driver_license_front = files.driver_license_front[0].path;
+        if (files?.driver_license_back?.[0]) body.driver_license_back = files.driver_license_back[0].path;
 
         return this.adminService.createUser(body);
     }

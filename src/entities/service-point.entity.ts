@@ -12,6 +12,9 @@ export class ServicePoint {
     @Column()
     address: string;
 
+    @Column({ nullable: true })
+    province: string;
+
     @Column({
         type: 'point',
         srid: 4326,

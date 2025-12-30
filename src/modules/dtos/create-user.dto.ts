@@ -17,6 +17,10 @@ export class CreateUserDto {
     latitude?: number;
     longitude?: number;
     geofence_radius?: number;
+    province?: string;
     reward_amount?: number;
     is_active?: boolean;
+    bank_name?: string;
+    account_number?: string;
+    account_holder_name?: string;
 }

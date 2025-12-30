@@ -15,4 +15,5 @@ export class RegisterDto {
     driver_license_front?: string;
     driver_license_back?: string;
     address?: string;
+    province?: string;
 }

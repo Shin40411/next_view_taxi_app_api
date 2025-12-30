@@ -6,6 +6,7 @@ import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { ServicePoint } from 'src/entities/service-point.entity';
 import { Trip } from 'src/entities/trip.entity';
 import { User } from 'src/entities/user.entity';
+import { BankAccount } from 'src/entities/bank-account.entity';
 import { UserRole } from 'src/utils/user-role.enum';
 import { Repository } from 'typeorm';
 import { TripStatus } from 'src/utils/trips-status-enum';
@@ -17,9 +18,10 @@ export class AdminService {
         @InjectRepository(ServicePoint) private serviceRepo: Repository<ServicePoint>,
         @InjectRepository(Trip) private tripRepo: Repository<Trip>,
         @InjectRepository(PartnerProfile) private profileRepo: Repository<PartnerProfile>,
+        @InjectRepository(BankAccount) private bankRepo: Repository<BankAccount>,
     ) { }
 
-    async getUsers(role: UserRole | undefined, page: number = 1, limit: number = 10) {
+    async getUsers(role: UserRole | undefined, page: number = 1, limit: number = 10, search?: string, province?: string) {
         const query = this.userRepo.createQueryBuilder('user');
 
         if (role) {
@@ -29,8 +31,18 @@ export class AdminService {
         // Include relations based on roles
         query.leftJoinAndSelect('user.partnerProfile', 'partnerProfile');
         query.leftJoinAndSelect('user.servicePoints', 'servicePoints');
+        query.leftJoinAndSelect('user.bankAccount', 'bankAccount');
+
+        if (search) {
+            query.andWhere('(user.full_name LIKE :search OR user.username LIKE :search)', { search: `%${search}%` });
+        }
+
+        if (role === UserRole.CUSTOMER && province) {
+            query.andWhere('servicePoints.province = :province', { province });
+        }
 
         query.orderBy('user.created_at', 'DESC');
+
         query.skip((page - 1) * limit);
         query.take(limit);
 
@@ -54,7 +66,7 @@ export class AdminService {
     async getUserById(id: string) {
         const user = await this.userRepo.findOne({
             where: { id },
-            relations: ['partnerProfile', 'servicePoints']
+            relations: ['partnerProfile', 'servicePoints', 'bankAccount']
         });
 
         if (!user) throw new NotFoundException('User not found');
@@ -84,17 +96,15 @@ export class AdminService {
 
         const savedUser = await this.userRepo.save(newUser);
 
-        // If creating a PARTNER, create a profile
-        // If creating a PARTNER or INTRODUCER, create a profile
         if (dto.role === UserRole.PARTNER || dto.role === UserRole.INTRODUCER) {
             const profile = this.profileRepo.create({
                 user: savedUser,
-                vehicle_plate: dto.role === UserRole.PARTNER ? (dto.vehicle_plate || 'Updating...') : (dto.vehicle_plate || 'No Plate'),
+                vehicle_plate: dto.role === UserRole.PARTNER ? (dto.vehicle_plate || 'Updating...') : (dto.vehicle_plate || ''),
                 brand: dto.brand || null,
                 id_card_front: dto.id_card_front || null,
                 id_card_back: dto.id_card_back || null,
-                driver_license_front: dto.driver_license_front || null,
-                driver_license_back: dto.driver_license_back || null,
+                driver_license_front: dto.driver_license_front || '',
+                driver_license_back: dto.driver_license_back || '',
                 is_online: false,
                 wallet_balance: 0,
                 current_location: 'POINT(10.776111 106.701111)',
@@ -102,7 +112,6 @@ export class AdminService {
             await this.profileRepo.save(profile);
         }
 
-        // If creating a CUSTOMER, create a default service point
         if (dto.role === UserRole.CUSTOMER) {
             const latitude = dto.latitude || 10.776111;
             const longitude = dto.longitude || 106.701111;
@@ -115,8 +124,20 @@ export class AdminService {
                 advertising_budget: 0,
                 geofence_radius: dto.geofence_radius !== undefined ? Number(dto.geofence_radius) : 100,
                 location: `POINT(${latitude} ${longitude})`,
+                province: dto.province,
             });
             await this.serviceRepo.save(servicePoint);
+        }
+
+        // Create Bank Account if provided
+        if (dto.bank_name || dto.account_number || dto.account_holder_name) {
+            const bankAccount = this.bankRepo.create({
+                user: savedUser,
+                bank_name: dto.bank_name || '',
+                account_number: dto.account_number || '',
+                account_holder_name: dto.account_holder_name || '',
+            });
+            await this.bankRepo.save(bankAccount);
         }
 
         return { message: 'Tạo tài khoản thành công', userId: savedUser.id };
@@ -125,7 +146,7 @@ export class AdminService {
     async updateUser(id: string, dto: UpdateUserDto) {
         const user = await this.userRepo.findOne({
             where: { id },
-            relations: ['partnerProfile', 'servicePoints']
+            relations: ['partnerProfile', 'servicePoints', 'bankAccount']
         });
 
         if (!user) {
@@ -159,6 +180,7 @@ export class AdminService {
             // Update the primary service point (first one)
             const servicePoint = user.servicePoints[0];
             if (dto.address) servicePoint.address = dto.address;
+            if (dto.province) servicePoint.province = dto.province;
             if (dto.reward_amount !== undefined) servicePoint.reward_amount = dto.reward_amount;
             if (dto.advertising_budget !== undefined) servicePoint.advertising_budget = dto.advertising_budget;
             if (dto.geofence_radius !== undefined) servicePoint.geofence_radius = dto.geofence_radius;
@@ -169,7 +191,21 @@ export class AdminService {
             await this.serviceRepo.save(servicePoint);
         }
 
-        return { message: 'User updated successfully' };
+        // Update Bank Account
+        if (dto.bank_name || dto.account_number || dto.account_holder_name) {
+            let bankAccount = user.bankAccount;
+            if (!bankAccount) {
+                bankAccount = this.bankRepo.create({ user });
+            }
+
+            if (dto.bank_name) bankAccount.bank_name = dto.bank_name;
+            if (dto.account_number) bankAccount.account_number = dto.account_number;
+            if (dto.account_holder_name) bankAccount.account_holder_name = dto.account_holder_name;
+
+            await this.bankRepo.save(bankAccount);
+        }
+
+        return { message: 'Cập nhật thông tin thành công' };
     }
 
     async getPartnerStats(range: string) {

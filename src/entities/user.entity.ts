@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToOne, One
 import { UserRole } from '../utils/user-role.enum';
 import { PartnerProfile } from './partner-profile.entity';
 import { ServicePoint } from './service-point.entity';
+import { BankAccount } from './bank-account.entity';
 
 @Entity('users')
 export class User {
@@ -28,6 +29,9 @@ export class User {
 
     @OneToOne(() => PartnerProfile, (profile) => profile.user)
     partnerProfile: PartnerProfile;
+
+    @OneToOne(() => BankAccount, (bankAccount) => bankAccount.user)
+    bankAccount: BankAccount;
 
     @OneToMany(() => ServicePoint, (servicePoint) => servicePoint.owner)
     servicePoints: ServicePoint[];

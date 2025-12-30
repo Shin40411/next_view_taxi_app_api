@@ -20,4 +20,10 @@ export class UpdateUserDto {
     geofence_radius?: number; // meters
     latitude?: number;
     longitude?: number;
+    province?: string;
+
+    // Bank Account
+    bank_name?: string;
+    account_number?: string;
+    account_holder_name?: string;
 }

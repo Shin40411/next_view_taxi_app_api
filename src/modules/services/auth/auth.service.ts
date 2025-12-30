@@ -63,12 +63,10 @@ export class AuthService {
 
         const savedUser = await this.userRepo.save(newUser);
 
-        // Handle PARTNER or INTRODUCER profile creation
         if (dto.role === UserRole.PARTNER || dto.role === UserRole.INTRODUCER) {
             const profile = this.profileRepo.create({
                 user: savedUser,
-                // Only PARTNER requires these; INTRODUCER might not have them
-                vehicle_plate: dto.role === UserRole.PARTNER ? dto.vehicle_plate : (dto.vehicle_plate || 'No Plate'),
+                vehicle_plate: dto.role === UserRole.PARTNER ? dto.vehicle_plate : (dto.vehicle_plate || ''),
                 id_card_front: dto.id_card_front || null,
                 id_card_back: dto.id_card_back || null,
                 driver_license_front: dto.driver_license_front || null,
@@ -89,6 +87,7 @@ export class AuthService {
                 advertising_budget: 0,
                 geofence_radius: 100,
                 location: 'POINT(10.776111 106.701111)',
+                province: dto.province,
             });
             await this.serviceRepo.save(servicePoint);
         }
