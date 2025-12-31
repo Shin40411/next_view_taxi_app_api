@@ -200,4 +200,16 @@ export class AuthService {
 
         return { message: 'Đổi mật khẩu thành công' };
     }
+    async setPartnerStatus(userId: string, isOnline: boolean) {
+        const user = await this.userRepo.findOne({ where: { id: userId } });
+        if (!user || (user.role !== UserRole.PARTNER && user.role !== UserRole.INTRODUCER)) {
+            return;
+        }
+
+        const profile = await this.profileRepo.findOne({ where: { user: { id: userId } } });
+        if (profile) {
+            profile.is_online = isOnline;
+            await this.profileRepo.save(profile);
+        }
+    }
 }

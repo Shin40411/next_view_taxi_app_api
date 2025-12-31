@@ -7,6 +7,8 @@ import { Repository, DataSource, In } from 'typeorm';
 import { PointTransaction } from 'src/entities/point-transaction.entity';
 import { TransactionType } from 'src/utils/point-transaction-enum';
 import { TripStatus } from 'src/utils/trips-status-enum';
+import { SocketGateway } from 'src/modules/socket/socket.gateway';
+import { PartnerService } from 'src/modules/services/partners/partner.service';
 
 @Injectable()
 export class CustomerService {
@@ -17,6 +19,8 @@ export class CustomerService {
         @InjectRepository(User) private userRepo: Repository<User>,
         @InjectRepository(PointTransaction) private transactionRepo: Repository<PointTransaction>,
         private dataSource: DataSource,
+        private socketGateway: SocketGateway,
+        private partnerService: PartnerService,
     ) { }
 
     async getArrivedTrips(ownerId: string) {
@@ -147,6 +151,17 @@ export class CustomerService {
             await queryRunner.manager.save(trip);
 
             await queryRunner.commitTransaction();
+
+            // Notify Driver
+            // trip.partner is loaded in findOne above
+            if (trip.partner) {
+                this.socketGateway.sendToUser(trip.partner.id, 'partner:trip_confirmed', {
+                    trip_id: trip.trip_id,
+                    actual_guest_count: actual_guest_count,
+                    reward_amount: rewardAmount
+                });
+            }
+
             return { message: 'Đã xác nhận thành công. Tài xế đã nhận GoXu.' };
 
         } catch (err) {
@@ -171,6 +186,20 @@ export class CustomerService {
         if (reason) trip.reject_reason = reason;
 
         await this.tripRepo.save(trip);
+
+        // Notify Driver
+        // Need to reload to ensure partner is there if not loaded (though ideally should load in first findOne)
+        const fullTrip = await this.tripRepo.findOne({
+            where: { trip_id: tripId },
+            relations: ['partner']
+        });
+
+        if (fullTrip && fullTrip.partner) {
+            this.socketGateway.sendToUser(fullTrip.partner.id, 'partner:trip_rejected', {
+                trip_id: trip.trip_id,
+                reason: reason || 'Khách hàng đã từ chối'
+            });
+        }
 
         return { message: 'Đã huỷ đơn!' };
     }
@@ -222,5 +251,9 @@ export class CustomerService {
         return {
             totalSpent
         };
+    }
+
+    async getActiveDrivers() {
+        return this.partnerService.getActivePartners();
     }
 }

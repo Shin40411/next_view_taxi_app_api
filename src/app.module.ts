@@ -19,6 +19,7 @@ import { PartnerService } from './modules/services/partners/partner.service';
 import { CustomerController } from './modules/controller/customers/customer.controller';
 import { CustomerService } from './modules/services/customers/customer.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { SocketModule } from './modules/socket/socket.module';
 
 import { VietmapService } from './utils/vietmap.service';
 
@@ -43,7 +44,8 @@ import { VietmapService } from './utils/vietmap.service';
     }),
 
     TypeOrmModule.forFeature([User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount]),
-    AuthModule
+    AuthModule,
+    SocketModule
   ],
   controllers: [SeedController, TripsController, AdminController, PartnerController, CustomerController],
   providers: [TripsService, AdminService, PartnerService, CustomerService, VietmapService],

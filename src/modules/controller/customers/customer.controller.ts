@@ -51,4 +51,9 @@ export class CustomerController {
     async getBudgetStats(@Request() req, @Query('range') range: string) {
         return this.customerService.getBudgetStatistics(req.user.sub, range);
     }
+
+    @Get('active-drivers')
+    async getActiveDrivers() {
+        return this.customerService.getActiveDrivers();
+    }
 }

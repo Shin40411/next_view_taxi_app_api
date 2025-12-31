@@ -5,6 +5,7 @@ import { ServicePoint } from 'src/entities/service-point.entity';
 import { Trip } from 'src/entities/trip.entity';
 import { TripStatus } from 'src/utils/trips-status-enum';
 import { Repository, Between, DataSource } from 'typeorm';
+import { SocketGateway } from 'src/modules/socket/socket.gateway';
 
 @Injectable()
 export class PartnerService {
@@ -12,6 +13,7 @@ export class PartnerService {
         @InjectRepository(PartnerProfile) private profileRepo: Repository<PartnerProfile>,
         @InjectRepository(Trip) private tripRepo: Repository<Trip>,
         private dataSource: DataSource,
+        private socketGateway: SocketGateway,
     ) { }
 
     async getStatistics(partnerId: string, range: 'today' | 'yesterday' | 'week' | 'month') {
@@ -96,11 +98,26 @@ export class PartnerService {
             .createQueryBuilder('sp')
             .select(['sp.id', 'sp.name', 'sp.address', 'sp.reward_amount', 'sp.location', 'sp.advertising_budget']) // Lấy location để map zoom vào
             .where('sp.name LIKE :keyword', { keyword: `%${keyword}%` })
-            // .andWhere('sp.is_active = :active', { active: true })
+            .orWhere('sp.address LIKE :keyword', { keyword: `%${keyword}%` })
             .take(10)
             .getMany();
     }
 
+    async getActivePartners() {
+        const partners = await this.profileRepo.find({
+            where: { is_online: true },
+            relations: ['user']
+        });
+
+        return partners.map(p => ({
+            id: p.user.id,
+            full_name: p.user.full_name,
+            vehicle_plate: p.vehicle_plate,
+            phone: p.user.username,
+            avatarUrl: '', // TODO: Add avatar if available
+            current_location: p.current_location
+        }));
+    }
     async createTripRequest(partnerId: string, servicePointId: string, guestCount: number) {
         const pendingTrip = await this.tripRepo.findOne({
             where: {
@@ -126,6 +143,37 @@ export class PartnerService {
 
         await this.tripRepo.save(newTrip);
 
+        // Notify Customer (Shop Owner)
+        const partner = await this.profileRepo.findOne({ where: { user: { id: partnerId } }, relations: ['user'] });
+
+        // Ensure servicePoint owner is loaded if not already
+        const spWithOwner = await this.dataSource.getRepository(ServicePoint).findOne({
+            where: { id: servicePointId },
+            relations: ['owner']
+        });
+
+        if (spWithOwner && spWithOwner.owner) {
+            console.log('Emitting customer:new_trip_request to:', spWithOwner.owner.id);
+            console.log('Payload:', {
+                trip_id: newTrip.trip_id,
+                guest_count: guestCount,
+                partner: {
+                    id: partnerId,
+                    name: partner?.user.full_name,
+                    vehicle_plate: partner?.vehicle_plate
+                }
+            });
+            this.socketGateway.sendToUser(spWithOwner.owner.id, 'customer:new_trip_request', {
+                trip_id: newTrip.trip_id,
+                guest_count: guestCount,
+                partner: {
+                    id: partnerId,
+                    name: partner?.user.full_name,
+                    vehicle_plate: partner?.vehicle_plate
+                }
+            });
+        }
+
         return { message: 'Yêu cầu của bạn đã được gửi đi', trip_id: newTrip.trip_id };
     }
 
@@ -148,6 +196,26 @@ export class PartnerService {
 
         await this.tripRepo.save(trip);
 
+        // Notify Customer
+        const partner = await this.profileRepo.findOne({ where: { user: { id: partnerId } }, relations: ['user'] });
+
+        const fullTrip = await this.tripRepo.findOne({
+            where: { trip_id: tripId },
+            relations: ['servicePoint', 'servicePoint.owner']
+        });
+
+        if (fullTrip && fullTrip.servicePoint.owner) {
+            this.socketGateway.sendToUser(fullTrip.servicePoint.owner.id, 'customer:driver_arrived', {
+                trip_id: trip.trip_id,
+                arrival_time: trip.arrival_time,
+                partner: {
+                    id: partnerId,
+                    name: partner?.user.full_name,
+                    vehicle_plate: partner?.vehicle_plate
+                }
+            });
+        }
+
         return { message: 'Đã xác nhận đến điểm phục vụ' };
     }
 
@@ -168,6 +236,19 @@ export class PartnerService {
         trip.status = TripStatus.CANCELLED;
         if (reason) trip.reject_reason = reason; // Reuse reject_reason for cancellation reason
         await this.tripRepo.save(trip);
+
+        // Notify Customer
+        const fullTrip = await this.tripRepo.findOne({
+            where: { trip_id: tripId },
+            relations: ['servicePoint', 'servicePoint.owner']
+        });
+
+        if (fullTrip && fullTrip.servicePoint.owner) {
+            this.socketGateway.sendToUser(fullTrip.servicePoint.owner.id, 'customer:trip_cancelled', {
+                trip_id: trip.trip_id,
+                reason: reason || 'Tài xế đã huỷ chuyến'
+            });
+        }
 
         return { message: 'Đã huỷ đơn thành công' };
     }

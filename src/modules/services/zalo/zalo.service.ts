@@ -32,10 +32,19 @@ export class ZaloService {
             );
 
             if (response.data.error !== 0) {
+                // console.error('Zalo ZNS Error Details:', JSON.stringify(response.data));
+                console.log(formattedPhone, templateId, templateData);
+                console.log(accessToken);
+                console.log("cc", response.data);
                 if ((response.data.error === -216 || response.data.error === -201) && !isRetry) {
-                    await this.refreshAccessToken();
-                    console.log('Token hết hạn, đang thử làm mới...');
-                    return this.sendZns(phoneNumber, templateId, templateData, true);
+                    console.log('Token hết hạn hoặc không hợp lệ, đang thử làm mới...');
+                    try {
+                        await this.refreshAccessToken();
+                        return this.sendZns(phoneNumber, templateId, templateData, true);
+                    } catch (refreshError) {
+                        console.error("Lỗi khi cố refresh token:", refreshError);
+                        throw new BadRequestException('Hết phiên đăng nhập Zalo, vui lòng liên hệ Admin');
+                    }
                 }
                 throw new BadRequestException(response.data.message || 'Lỗi gửi ZNS');
             }
@@ -52,6 +61,13 @@ export class ZaloService {
         if (cachedToken) {
             return cachedToken;
         }
+
+        const envToken = this.configService.get<string>('ZALO_ACCESS_TOKEN');
+        if (envToken) {
+            await this.redis.set('zalo:access_token', envToken, 'EX', 3600);
+            return envToken;
+        }
+
         return await this.refreshAccessToken();
     }
 
@@ -83,6 +99,7 @@ export class ZaloService {
 
             const { access_token, refresh_token, expires_in } = response.data;
 
+            console.log('at', access_token);
             if (access_token) {
                 const expiresInProp = expires_in ? parseInt(expires_in) - 60 : 3600;
                 await this.redis.set('zalo:access_token', access_token, 'EX', expiresInProp);
