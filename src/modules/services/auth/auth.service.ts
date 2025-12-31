@@ -170,6 +170,16 @@ export class AuthService {
         return { message: 'Mã OTP đã được gửi qua Zalo' };
     }
 
+    async verifyOtp(username: string, otp: string) {
+        const storedOtp = await this.redis.get(`reset_otp:${username}`);
+
+        if (!storedOtp || storedOtp !== otp) {
+            throw new BadRequestException('Mã OTP không chính xác hoặc đã hết hạn');
+        }
+
+        return { message: 'Xác thực OTP thành công' };
+    }
+
     async confirmPasswordReset(username: string, otp: string, newPassword: string) {
         const storedOtp = await this.redis.get(`reset_otp:${username}`);
 

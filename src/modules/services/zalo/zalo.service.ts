@@ -1,16 +1,16 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import * as fs from 'fs';
-import * as path from 'path';
+import Redis from 'ioredis';
 
 @Injectable()
 export class ZaloService {
-    private readonly tokenFilePath = path.resolve('zalo-tokens.json');
+    constructor(
+        @Inject('REDIS_CLIENT') private readonly redis: Redis,
+        private configService: ConfigService
+    ) { }
 
-    constructor(private configService: ConfigService) { }
-
-    async sendZns(phoneNumber: string, templateId: string, templateData: any) {
+    async sendZns(phoneNumber: string, templateId: string, templateData: any, isRetry = false) {
         const accessToken = await this.getAccessToken();
         const formattedPhone = this.formatPhone(phoneNumber);
 
@@ -32,37 +32,34 @@ export class ZaloService {
             );
 
             if (response.data.error !== 0) {
-                if (response.data.error === -216 || response.data.error === -201) {
+                if ((response.data.error === -216 || response.data.error === -201) && !isRetry) {
                     await this.refreshAccessToken();
-                    return this.sendZns(phoneNumber, templateId, templateData);
+                    console.log('Token hết hạn, đang thử làm mới...');
+                    return this.sendZns(phoneNumber, templateId, templateData, true);
                 }
-                throw new BadRequestException(response.data.message);
+                throw new BadRequestException(response.data.message || 'Lỗi gửi ZNS');
             }
 
             return response.data;
         } catch (error) {
+            console.error(error);
             throw new BadRequestException('Lỗi gửi tin nhắn Zalo');
         }
     }
 
     private async getAccessToken(): Promise<string> {
-        if (fs.existsSync(this.tokenFilePath)) {
-            const data = fs.readFileSync(this.tokenFilePath, 'utf8');
-            const tokens = JSON.parse(data);
-            return tokens.access_token;
+        const cachedToken = await this.redis.get('zalo:access_token');
+        if (cachedToken) {
+            return cachedToken;
         }
         return await this.refreshAccessToken();
     }
 
     private async refreshAccessToken(): Promise<string> {
-        let refreshToken = this.configService.get<string>('ZALO_REFRESH_TOKEN');
+        let refreshToken = await this.redis.get('zalo:refresh_token');
 
-        if (fs.existsSync(this.tokenFilePath)) {
-            const data = fs.readFileSync(this.tokenFilePath, 'utf8');
-            const tokens = JSON.parse(data);
-            if (tokens.refresh_token) {
-                refreshToken = tokens.refresh_token;
-            }
+        if (!refreshToken) {
+            refreshToken = this.configService.get<string>('ZALO_REFRESH_TOKEN') || null;
         }
 
         const appId = this.configService.get<string>('ZALO_APP_ID');
@@ -84,15 +81,19 @@ export class ZaloService {
                 }
             );
 
-            const { access_token, refresh_token } = response.data;
+            const { access_token, refresh_token, expires_in } = response.data;
 
-            fs.writeFileSync(this.tokenFilePath, JSON.stringify({
-                access_token,
-                refresh_token
-            }));
+            if (access_token) {
+                const expiresInProp = expires_in ? parseInt(expires_in) - 60 : 3600;
+                await this.redis.set('zalo:access_token', access_token, 'EX', expiresInProp);
+            }
+            if (refresh_token) {
+                await this.redis.set('zalo:refresh_token', refresh_token, 'EX', 30 * 24 * 60 * 60);
+            }
 
             return access_token;
         } catch (error) {
+            console.error('Refresh Token Error:', error?.response?.data || error.message);
             throw new BadRequestException('Không thể làm mới Zalo Token');
         }
     }

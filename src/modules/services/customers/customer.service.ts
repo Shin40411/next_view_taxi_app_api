@@ -101,13 +101,12 @@ export class CustomerService {
         });
     }
 
-    async confirmTrip(ownerId: string, tripId: string) {
+    async confirmTrip(ownerId: string, tripId: string, actual_guest_count: number) {
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
         try {
-
             const trip = await queryRunner.manager.findOne(Trip, {
                 where: { trip_id: tripId },
                 relations: ['servicePoint', 'servicePoint.owner', 'partner', 'partner.partnerProfile']
@@ -115,20 +114,18 @@ export class CustomerService {
 
             if (!trip) throw new BadRequestException('Đơn không tồn tại');
 
-            // Only allow confirmation if the driver has ARRIVED
             if (trip.status !== TripStatus.ARRIVED) {
                 throw new BadRequestException('Tài xế chưa xác nhận đến hoặc đơn đã được xử lý');
             }
 
             if (trip.servicePoint.owner.id !== ownerId) throw new ForbiddenException('Bạn không sở hữu quán này');
 
-            const rewardAmount = trip.reward_snapshot;
-            const shopBudget = trip.servicePoint.advertising_budget;
+            const rewardAmount = (Number(trip.reward_snapshot) / Number(trip.guest_count)) * actual_guest_count;
+            const shopBudget = Number(trip.servicePoint.advertising_budget);
 
             trip.servicePoint.advertising_budget = shopBudget - rewardAmount;
             await queryRunner.manager.save(trip.servicePoint);
 
-            // Create Point Transaction
             const transaction = queryRunner.manager.create(PointTransaction, {
                 servicePoint: trip.servicePoint,
                 trip: trip,
@@ -139,11 +136,14 @@ export class CustomerService {
             await queryRunner.manager.save(transaction);
 
             const driverProfile = trip.partner.partnerProfile;
-            driverProfile.wallet_balance = Number(driverProfile.wallet_balance) + Number(rewardAmount);
+            driverProfile.wallet_balance = Number(driverProfile.wallet_balance) + rewardAmount;
+
             await queryRunner.manager.save(driverProfile);
 
             trip.status = TripStatus.COMPLETED;
-            trip.actual_guest_count = trip.guest_count;
+            trip.actual_guest_count = actual_guest_count;
+            trip.reward_snapshot = rewardAmount;
+
             await queryRunner.manager.save(trip);
 
             await queryRunner.commitTransaction();

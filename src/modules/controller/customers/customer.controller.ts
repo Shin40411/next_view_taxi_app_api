@@ -33,8 +33,8 @@ export class CustomerController {
     }
 
     @Post('confirm-request/:tripId')
-    async confirmRequest(@Request() req, @Param('tripId') tripId: string) {
-        return this.customerService.confirmTrip(req.user.sub, tripId);
+    async confirmRequest(@Request() req, @Param('tripId') tripId: string, @Body('actualGuestCount') actualGuestCount: number) {
+        return this.customerService.confirmTrip(req.user.sub, tripId, actualGuestCount);
     }
 
     @Post('reject-request/:tripId')
