@@ -9,6 +9,7 @@ import { ServicePoint } from './entities/service-point.entity';
 import { Trip } from './entities/trip.entity';
 import { PointTransaction } from './entities/point-transaction.entity';
 import { BankAccount } from './entities/bank-account.entity';
+import { Notification } from './entities/notification.entity';
 import { SeedController } from './seed/seed.controller';
 import { TripsController } from './modules/controller/trips/trips.controller';
 import { TripsService } from './modules/services/trips/trips.service';
@@ -20,6 +21,7 @@ import { CustomerController } from './modules/controller/customers/customer.cont
 import { CustomerService } from './modules/services/customers/customer.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { SocketModule } from './modules/socket/socket.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 import { VietmapService } from './utils/vietmap.service';
 
@@ -38,14 +40,15 @@ import { VietmapService } from './utils/vietmap.service';
       password: process.env.DB_PASSWORD!,
       database: process.env.DB_NAME || 'taxi_app_db',
 
-      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount],
+      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Notification],
       synchronize: true,
       legacySpatialSupport: false,
     }),
 
     TypeOrmModule.forFeature([User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount]),
     AuthModule,
-    SocketModule
+    SocketModule,
+    NotificationModule,
   ],
   controllers: [SeedController, TripsController, AdminController, PartnerController, CustomerController],
   providers: [TripsService, AdminService, PartnerService, CustomerService, VietmapService],

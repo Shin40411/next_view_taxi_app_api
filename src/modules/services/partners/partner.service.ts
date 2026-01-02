@@ -171,6 +171,9 @@ export class PartnerService {
                     name: partner?.user.full_name,
                     vehicle_plate: partner?.vehicle_plate
                 }
+            }, {
+                title: 'Yêu cầu chuyến xe',
+                body: `Bạn có yêu cầu đặt xe mới từ ${partner?.user.full_name} (${guestCount} khách)`
             });
         }
 
@@ -213,6 +216,9 @@ export class PartnerService {
                     name: partner?.user.full_name,
                     vehicle_plate: partner?.vehicle_plate
                 }
+            }, {
+                title: 'Tài xế đã đến',
+                body: `Tài xế ${partner?.user.full_name} đã đến điểm đón`
             });
         }
 
@@ -247,6 +253,9 @@ export class PartnerService {
             this.socketGateway.sendToUser(fullTrip.servicePoint.owner.id, 'customer:trip_cancelled', {
                 trip_id: trip.trip_id,
                 reason: reason || 'Tài xế đã huỷ chuyến'
+            }, {
+                title: 'Chuyến đi bị huỷ',
+                body: `Tài xế đã huỷ chuyến đi. Lý do: ${reason || 'Không có lý do'}`
             });
         }
 

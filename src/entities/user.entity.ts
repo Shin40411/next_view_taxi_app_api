@@ -3,6 +3,7 @@ import { UserRole } from '../utils/user-role.enum';
 import { PartnerProfile } from './partner-profile.entity';
 import { ServicePoint } from './service-point.entity';
 import { BankAccount } from './bank-account.entity';
+import { Notification } from './notification.entity';
 
 @Entity('users')
 export class User {
@@ -35,4 +36,7 @@ export class User {
 
     @OneToMany(() => ServicePoint, (servicePoint) => servicePoint.owner)
     servicePoints: ServicePoint[];
+
+    @OneToMany(() => Notification, (notification) => notification.user)
+    notifications: Notification[];
 }

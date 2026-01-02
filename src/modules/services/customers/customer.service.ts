@@ -159,6 +159,9 @@ export class CustomerService {
                     trip_id: trip.trip_id,
                     actual_guest_count: actual_guest_count,
                     reward_amount: rewardAmount
+                }, {
+                    title: 'Chuyến đi hoàn thành',
+                    body: `Chuyến đi đã hoàn tất! Bạn nhận được ${rewardAmount} GoXu`
                 });
             }
 
@@ -198,6 +201,9 @@ export class CustomerService {
             this.socketGateway.sendToUser(fullTrip.partner.id, 'partner:trip_rejected', {
                 trip_id: trip.trip_id,
                 reason: reason || 'Khách hàng đã từ chối'
+            }, {
+                title: 'Chuyến đi bị từ chối',
+                body: `Khách hàng đã từ chối chuyến đi. Lý do: ${reason || 'Không có lý do'}`
             });
         }
 

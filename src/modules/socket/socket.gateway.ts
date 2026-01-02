@@ -8,6 +8,7 @@ import {
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { AuthService } from '../services/auth/auth.service';
+import { NotificationService } from '../services/notification/notification.service';
 
 @WebSocketGateway({
     cors: {
@@ -21,7 +22,10 @@ export class SocketGateway
 
     private activeUsers: Map<string, string[]> = new Map();
 
-    constructor(private authService: AuthService) { }
+    constructor(
+        private authService: AuthService,
+        private notificationService: NotificationService
+    ) { }
 
     afterInit(server: Server) {
         this.logger.log('Socket Gateway Initialized');
@@ -79,9 +83,19 @@ export class SocketGateway
         }
     }
 
-    sendToUser(userId: string, event: string, data: any) {
+    async sendToUser(userId: string, event: string, data: any, notification?: { title: string, body: string, type?: string }) {
         const socketIds = this.activeUsers.get(userId);
         console.log(`SocketGateway: Sending event ${event} to user ${userId}. Active sockets: ${socketIds?.length || 0}`);
+
+        if (notification) {
+            await this.notificationService.createForUser(userId, {
+                title: notification.title,
+                body: notification.body,
+                type: notification.type || event,
+                data: data
+            });
+        }
+
         if (socketIds && socketIds.length > 0) {
             socketIds.forEach(socketId => {
                 this.server.to(socketId).emit(event, data);
