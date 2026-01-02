@@ -2,6 +2,7 @@ import { UserRole } from "src/utils/user-role.enum";
 
 export * from './create-user.dto';
 export * from './update-user.dto';
+export * from './admin-change-password.dto';
 
 export class RegisterDto {
     username: string;
@@ -16,4 +17,5 @@ export class RegisterDto {
     driver_license_back?: string;
     address?: string;
     province?: string;
+    reward_amount?: number;
 }

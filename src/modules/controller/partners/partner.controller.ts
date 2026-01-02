@@ -51,7 +51,11 @@ export class PartnerController {
     }
 
     @Get('my-requests')
-    async getMyRequests(@Request() req) {
-        return this.partnerService.getMyTripRequests(req.user.sub);
+    async getMyRequests(
+        @Request() req,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 5
+    ) {
+        return this.partnerService.getMyTripRequests(req.user.sub, Number(page), Number(limit));
     }
 }

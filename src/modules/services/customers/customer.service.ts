@@ -9,6 +9,7 @@ import { TransactionType } from 'src/utils/point-transaction-enum';
 import { TripStatus } from 'src/utils/trips-status-enum';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
 import { PartnerService } from 'src/modules/services/partners/partner.service';
+import { PartnerProfile } from 'src/entities/partner-profile.entity';
 
 @Injectable()
 export class CustomerService {
@@ -23,86 +24,66 @@ export class CustomerService {
         private partnerService: PartnerService,
     ) { }
 
-    async getArrivedTrips(ownerId: string) {
+    private async getPaginatedTrips(ownerId: string, status: TripStatus | 'ALL', page: number, limit: number) {
         const myShops = await this.serviceRepo.find({ where: { owner: { id: ownerId } } });
         const shopIds = myShops.map(shop => shop.id);
 
-        if (shopIds.length === 0) return [];
+        if (shopIds.length === 0) {
+            return {
+                data: [],
+                meta: { total: 0, page, limit, totalPages: 0 }
+            };
+        }
 
-        return this.tripRepo.find({
-            where: {
-                servicePoint: { id: In(shopIds) },
-                status: TripStatus.ARRIVED
-            },
-            relations: ['partner', 'partner.partnerProfile'],
-            order: { updated_at: 'DESC' }
+        const whereCondition: any = {
+            servicePoint: { id: In(shopIds) }
+        };
+
+        if (status !== 'ALL') {
+            whereCondition.status = status;
+        }
+
+        const [trips, total] = await this.tripRepo.findAndCount({
+            where: whereCondition,
+            relations: ['partner', 'partner.partnerProfile', 'servicePoint'],
+            order: { created_at: 'DESC' },
+            skip: (page - 1) * limit,
+            take: limit
         });
+
+        return {
+            data: trips,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        };
     }
 
-    async getCompletedTrips(ownerId: string) {
-        const myShops = await this.serviceRepo.find({ where: { owner: { id: ownerId } } });
-        const shopIds = myShops.map(shop => shop.id);
-
-        if (shopIds.length === 0) return [];
-
-        return this.tripRepo.find({
-            where: {
-                servicePoint: { id: In(shopIds) },
-                status: TripStatus.COMPLETED
-            },
-            relations: ['partner', 'partner.partnerProfile'],
-            order: { updated_at: 'DESC' }
-        });
+    async getAllTrips(ownerId: string, page: number = 1, limit: number = 5) {
+        return this.getPaginatedTrips(ownerId, 'ALL', page, limit);
     }
 
-    async getPendingTrips(ownerId: string) {
-
-        const myShops = await this.serviceRepo.find({ where: { owner: { id: ownerId } } });
-        const shopIds = myShops.map(shop => shop.id);
-
-        if (shopIds.length === 0) return [];
-
-        if (shopIds.length === 0) return [];
-        return this.tripRepo.find({
-            where: {
-                servicePoint: { id: In(shopIds) },
-                status: TripStatus.PENDING_CONFIRMATION
-            },
-            relations: ['partner', 'partner.partnerProfile'],
-            order: { created_at: 'DESC' }
-        });
+    async getArrivedTrips(ownerId: string, page: number = 1, limit: number = 5) {
+        return this.getPaginatedTrips(ownerId, TripStatus.ARRIVED, page, limit);
     }
 
-    async getRejectedTrips(ownerId: string) {
-        const myShops = await this.serviceRepo.find({ where: { owner: { id: ownerId } } });
-        const shopIds = myShops.map(shop => shop.id);
-
-        if (shopIds.length === 0) return [];
-
-        return this.tripRepo.find({
-            where: {
-                servicePoint: { id: In(shopIds) },
-                status: TripStatus.REJECTED
-            },
-            relations: ['partner', 'partner.partnerProfile'],
-            order: { updated_at: 'DESC' }
-        });
+    async getCompletedTrips(ownerId: string, page: number = 1, limit: number = 5) {
+        return this.getPaginatedTrips(ownerId, TripStatus.COMPLETED, page, limit);
     }
 
-    async getCancelledTrips(ownerId: string) {
-        const myShops = await this.serviceRepo.find({ where: { owner: { id: ownerId } } });
-        const shopIds = myShops.map(shop => shop.id);
+    async getPendingTrips(ownerId: string, page: number = 1, limit: number = 5) {
+        return this.getPaginatedTrips(ownerId, TripStatus.PENDING_CONFIRMATION, page, limit);
+    }
 
-        if (shopIds.length === 0) return [];
+    async getRejectedTrips(ownerId: string, page: number = 1, limit: number = 5) {
+        return this.getPaginatedTrips(ownerId, TripStatus.REJECTED, page, limit);
+    }
 
-        return this.tripRepo.find({
-            where: {
-                servicePoint: { id: In(shopIds) },
-                status: TripStatus.CANCELLED
-            },
-            relations: ['partner', 'partner.partnerProfile'],
-            order: { updated_at: 'DESC' }
-        });
+    async getCancelledTrips(ownerId: string, page: number = 1, limit: number = 5) {
+        return this.getPaginatedTrips(ownerId, TripStatus.CANCELLED, page, limit);
     }
 
     async confirmTrip(ownerId: string, tripId: string, actual_guest_count: number) {
@@ -140,9 +121,9 @@ export class CustomerService {
             await queryRunner.manager.save(transaction);
 
             const driverProfile = trip.partner.partnerProfile;
-            driverProfile.wallet_balance = Number(driverProfile.wallet_balance) + rewardAmount;
+            const newBalance = Number(driverProfile.wallet_balance) + rewardAmount;
 
-            await queryRunner.manager.save(driverProfile);
+            await queryRunner.manager.update(PartnerProfile, driverProfile.id, { wallet_balance: newBalance });
 
             trip.status = TripStatus.COMPLETED;
             trip.actual_guest_count = actual_guest_count;

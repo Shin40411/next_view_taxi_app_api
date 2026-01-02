@@ -86,7 +86,7 @@ export class AuthService {
                 owner: savedUser,
                 name: dto.full_name,
                 address: dto.address || 'Chưa cập nhật...',
-                reward_amount: 0,
+                reward_amount: dto.reward_amount || 0,
                 advertising_budget: 0,
                 geofence_radius: 100,
                 location: 'POINT(10.776111 106.701111)',
@@ -208,8 +208,7 @@ export class AuthService {
 
         const profile = await this.profileRepo.findOne({ where: { user: { id: userId } } });
         if (profile) {
-            profile.is_online = isOnline;
-            await this.profileRepo.save(profile);
+            await this.profileRepo.update(profile.id, { is_online: isOnline });
         }
     }
 }

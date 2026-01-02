@@ -87,9 +87,17 @@ export class PartnerService {
             }
         });
 
+        const totalTrips = await this.tripRepo.count({
+            where: {
+                partner: { id: userId },
+                status: TripStatus.COMPLETED
+            }
+        });
+
         return {
             wallet_balance: Number(profile.wallet_balance),
             trips_today: tripsToday,
+            total_trips: totalTrips,
         };
     }
 
@@ -262,14 +270,16 @@ export class PartnerService {
         return { message: 'Đã huỷ đơn thành công' };
     }
 
-    async getMyTripRequests(partnerId: string) {
-        const trips = await this.tripRepo.find({
+    async getMyTripRequests(partnerId: string, page: number = 1, limit: number = 5) {
+        const [trips, total] = await this.tripRepo.findAndCount({
             where: { partner: { id: partnerId } },
             relations: ['servicePoint'],
             order: { created_at: 'DESC' },
-            take: 50
+            skip: (page - 1) * limit,
+            take: limit
         });
-        return trips.map(trip => ({
+
+        const data = trips.map(trip => ({
             id: trip.trip_id,
             service_point_name: trip.servicePoint.name,
             service_point_address: trip.servicePoint.address,
@@ -280,5 +290,15 @@ export class PartnerService {
             created_at: trip.created_at,
             arrival_time: trip.arrival_time,
         }));
+
+        return {
+            data,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        };
     }
 }

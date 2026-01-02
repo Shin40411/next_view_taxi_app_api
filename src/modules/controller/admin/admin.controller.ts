@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Body, Query, Param, UseGuards, UseIntercept
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { CreateUserDto, UpdateUserDto } from 'src/modules/dtos';
+import { CreateUserDto, UpdateUserDto, AdminChangePasswordDto } from 'src/modules/dtos';
 import { UserRole } from 'src/utils/user-role.enum';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { AdminService } from 'src/modules/services/admin/admin.service';
@@ -123,5 +123,19 @@ export class AdminController {
         @Query('limit') limit: number
     ) {
         return this.adminService.getServicePointStats(range, Number(page) || 1, Number(limit) || 10);
+    }
+
+    @Post('users/change-password')
+    async changePassword(@Body() body: AdminChangePasswordDto) {
+        return this.adminService.changeUserPassword(body.userId, body.newPassword);
+    }
+
+    @Get('users/:id/trips')
+    async getUserTrips(
+        @Param('id') id: string,
+        @Query('page') page: number,
+        @Query('limit') limit: number,
+    ) {
+        return this.adminService.getUserTrips(id, Number(page) || 1, Number(limit) || 10);
     }
 }

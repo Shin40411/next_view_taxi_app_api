@@ -8,28 +8,33 @@ export class CustomerController {
     constructor(private readonly customerService: CustomerService) { }
 
     @Get('pending-requests')
-    async getPendingRequests(@Request() req) {
-        return this.customerService.getPendingTrips(req.user.sub);
+    async getPendingRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
+        return this.customerService.getPendingTrips(req.user.sub, Number(page), Number(limit));
     }
 
     @Get('arrived-requests')
-    async getArrivedRequests(@Request() req) {
-        return this.customerService.getArrivedTrips(req.user.sub);
+    async getArrivedRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
+        return this.customerService.getArrivedTrips(req.user.sub, Number(page), Number(limit));
     }
 
     @Get('completed-requests')
-    async getCompletedRequests(@Request() req) {
-        return this.customerService.getCompletedTrips(req.user.sub);
+    async getCompletedRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
+        return this.customerService.getCompletedTrips(req.user.sub, Number(page), Number(limit));
     }
 
     @Get('rejected-requests')
-    async getRejectedRequests(@Request() req) {
-        return this.customerService.getRejectedTrips(req.user.sub);
+    async getRejectedRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
+        return this.customerService.getRejectedTrips(req.user.sub, Number(page), Number(limit));
     }
 
     @Get('cancelled-requests')
-    async getCancelledRequests(@Request() req) {
-        return this.customerService.getCancelledTrips(req.user.sub);
+    async getCancelledRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
+        return this.customerService.getCancelledTrips(req.user.sub, Number(page), Number(limit));
+    }
+
+    @Get('all-requests')
+    async getAllRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
+        return this.customerService.getAllTrips(req.user.sub, Number(page), Number(limit));
     }
 
     @Post('confirm-request/:tripId')

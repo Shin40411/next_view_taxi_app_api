@@ -165,14 +165,18 @@ export class AdminService {
         // Update Partner/Introducer Profile
         if ((user.role === UserRole.PARTNER || user.role === UserRole.INTRODUCER) && user.partnerProfile) {
             const profile = user.partnerProfile;
-            if (dto.vehicle_plate) profile.vehicle_plate = dto.vehicle_plate;
-            if (dto.brand) profile.brand = dto.brand;
-            if (dto.driver_license_front) profile.driver_license_front = dto.driver_license_front;
-            if (dto.driver_license_back) profile.driver_license_back = dto.driver_license_back;
-            if (dto.id_card_front) profile.id_card_front = dto.id_card_front;
-            if (dto.id_card_back) profile.id_card_back = dto.id_card_back;
+            const profileUpdates: any = {};
 
-            await this.profileRepo.save(profile);
+            if (dto.vehicle_plate) profileUpdates.vehicle_plate = dto.vehicle_plate;
+            if (dto.brand) profileUpdates.brand = dto.brand;
+            if (dto.driver_license_front) profileUpdates.driver_license_front = dto.driver_license_front;
+            if (dto.driver_license_back) profileUpdates.driver_license_back = dto.driver_license_back;
+            if (dto.id_card_front) profileUpdates.id_card_front = dto.id_card_front;
+            if (dto.id_card_back) profileUpdates.id_card_back = dto.id_card_back;
+
+            if (Object.keys(profileUpdates).length > 0) {
+                await this.profileRepo.update(profile.id, profileUpdates);
+            }
         }
 
         // Update Service Point (Customer)
@@ -370,5 +374,43 @@ export class AdminService {
         }));
 
         return { data, total };
+    }
+
+
+    async changeUserPassword(userId: string, newPassword: string) {
+        const user = await this.userRepo.findOne({ where: { id: userId } });
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password_hash = hashedPassword;
+        await this.userRepo.save(user);
+
+        return { message: 'Password changed successfully' };
+    }
+
+    async getUserTrips(userId: string, page: number = 1, limit: number = 10) {
+        const query = this.tripRepo.createQueryBuilder('trip')
+            .leftJoinAndSelect('trip.partner', 'partner')
+            .leftJoinAndSelect('trip.servicePoint', 'servicePoint')
+            .leftJoinAndSelect('servicePoint.owner', 'owner')
+            .where('partner.id = :userId OR owner.id = :userId', { userId })
+            .orderBy('trip.created_at', 'DESC');
+
+        if (limit > 0) {
+            query.skip((page - 1) * limit);
+            query.take(limit);
+        }
+
+        const [trips, total] = await query.getManyAndCount();
+
+        return {
+            data: trips,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
     }
 }
