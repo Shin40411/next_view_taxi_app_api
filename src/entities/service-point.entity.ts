@@ -31,6 +31,9 @@ export class ServicePoint {
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
     advertising_budget: number;
 
+    @Column({ type: 'int', default: 0, nullable: true })
+    discount: number;
+
     @ManyToOne(() => User)
     @JoinColumn({ name: 'owner_id' })
     owner: User;

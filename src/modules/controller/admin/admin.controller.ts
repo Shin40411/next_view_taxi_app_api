@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Put, Body, Query, Param, UseGuards, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Query, Param, UseGuards, UseInterceptors, UploadedFiles, Request } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { CreateUserDto, UpdateUserDto, AdminChangePasswordDto } from 'src/modules/dtos';
+import { CreateUserDto, UpdateUserDto, AdminChangePasswordDto } from 'src/modules/dtos/register-user.dto';
 import { UserRole } from 'src/utils/user-role.enum';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { AdminService } from 'src/modules/services/admin/admin.service';
@@ -24,8 +24,15 @@ export class AdminController {
     }
 
     @Get('users/:id')
-    async getUser(@Param('id') id: string) {
-        return this.adminService.getUserById(id);
+    async getUser(@Param('id') id: string, @Request() req) {
+        const user = await this.adminService.getUserById(id);
+
+        if (req.user.role !== 'ADMIN' && user.servicePoints) {
+            user.servicePoints.forEach(sp => {
+                delete (sp as any).discount;
+            });
+        }
+        return user;
     }
 
     @Post('users')

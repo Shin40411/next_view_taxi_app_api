@@ -2,7 +2,7 @@ import { Controller, Post, Body, UseGuards, Request, UseInterceptors, UploadedFi
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { RegisterDto } from 'src/modules/dtos';
+import { RegisterDto, ChangePasswordDto } from 'src/modules/dtos/register-user.dto';
 import { AuthService } from 'src/modules/services/auth/auth.service';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 
@@ -80,5 +80,11 @@ export class AuthController {
     @Post('reset-password')
     async resetPassword(@Body() body: { username: string, otp: string, newPassword: string }) {
         return this.authService.confirmPasswordReset(body.username, body.otp, body.newPassword);
+    }
+
+    @Post('change-password')
+    @UseGuards(AuthGuard)
+    async changePassword(@Request() req, @Body() body: ChangePasswordDto) {
+        return this.authService.changePassword(req.user.sub, body.oldPassword, body.newPassword);
     }
 }

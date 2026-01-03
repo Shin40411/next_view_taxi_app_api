@@ -3,6 +3,7 @@ import { UserRole } from "src/utils/user-role.enum";
 export * from './create-user.dto';
 export * from './update-user.dto';
 export * from './admin-change-password.dto';
+export * from './change-password.dto';
 
 export class RegisterDto {
     username: string;
@@ -18,4 +19,5 @@ export class RegisterDto {
     address?: string;
     province?: string;
     reward_amount?: number;
+    discount?: number;
 }

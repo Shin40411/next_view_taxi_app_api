@@ -19,6 +19,7 @@ export class CreateUserDto {
     geofence_radius?: number;
     province?: string;
     reward_amount?: number;
+    discount?: number;
     is_active?: boolean;
     bank_name?: string;
     account_number?: string;

@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto, UpdateUserDto } from 'src/modules/dtos';
+import { CreateUserDto, UpdateUserDto } from 'src/modules/dtos/register-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { ServicePoint } from 'src/entities/service-point.entity';
@@ -121,6 +121,7 @@ export class AdminService {
                 name: dto.full_name,
                 address: dto.address || 'Chưa cập nhật...',
                 reward_amount: dto.reward_amount !== undefined ? Number(dto.reward_amount) : 50000,
+                discount: dto.discount !== undefined ? Number(dto.discount) : 0,
                 advertising_budget: 0,
                 geofence_radius: dto.geofence_radius !== undefined ? Number(dto.geofence_radius) : 100,
                 location: `POINT(${latitude} ${longitude})`,
@@ -186,6 +187,7 @@ export class AdminService {
             if (dto.address) servicePoint.address = dto.address;
             if (dto.province) servicePoint.province = dto.province;
             if (dto.reward_amount !== undefined) servicePoint.reward_amount = dto.reward_amount;
+            if (dto.discount !== undefined) servicePoint.discount = Number(dto.discount);
             if (dto.advertising_budget !== undefined) servicePoint.advertising_budget = dto.advertising_budget;
             if (dto.geofence_radius !== undefined) servicePoint.geofence_radius = dto.geofence_radius;
             if (dto.latitude && dto.longitude) {
@@ -231,7 +233,9 @@ export class AdminService {
             .addGroupBy('partner.full_name')
             .addGroupBy('bankAccount.bank_name')
             .addGroupBy('bankAccount.account_number')
-            .addGroupBy('bankAccount.account_holder_name');
+            .addGroupBy('bankAccount.account_holder_name')
+            .leftJoin('trip.servicePoint', 'servicePoint')
+            .addSelect('SUM(trip.reward_snapshot - (trip.reward_snapshot * COALESCE(servicePoint.discount, 0) / 100))', 'totalDiscounted');
 
         const now = new Date();
         let startDate: Date | undefined;
@@ -269,10 +273,6 @@ export class AdminService {
         const totalQuery = query.clone();
         totalQuery.limit(undefined);
         totalQuery.offset(undefined);
-        // Remove ordering if any to speed up count
-
-        // Complex count with group by is tricky in TypeORM
-        // Simple way: get list of distinct IDs matching criteria
         const total = (await totalQuery.getRawMany()).length;
 
         if (limit > 0) {
@@ -288,6 +288,7 @@ export class AdminService {
             totalTrips: Number(stat.totalTrips),
             totalGuests: Number(stat.totalGuests) || 0,
             totalPoints: Number(stat.totalPoints) || 0,
+            totalDiscounted: Number(stat.totalDiscounted) || 0,
             bankName: stat.bankAccount_bank_name || '',
             accountNumber: stat.bankAccount_account_number || '',
             accountHolderName: stat.bankAccount_account_holder_name || '',

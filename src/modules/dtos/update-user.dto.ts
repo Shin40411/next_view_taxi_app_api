@@ -16,6 +16,7 @@ export class UpdateUserDto {
     // ServicePoint specific (Customer)
     address?: string;
     reward_amount?: number;
+    discount?: number;
     advertising_budget?: number;
     geofence_radius?: number; // meters
     latitude?: number;

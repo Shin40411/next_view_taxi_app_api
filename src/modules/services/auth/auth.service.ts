@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { UserRole } from 'src/utils/user-role.enum';
 import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { User } from 'src/entities/user.entity';
-import { RegisterDto } from 'src/modules/dtos';
+import { RegisterDto } from 'src/modules/dtos/register-user.dto';
 
 import { ZaloService } from 'src/modules/services/zalo/zalo.service';
 
@@ -87,6 +87,7 @@ export class AuthService {
                 name: dto.full_name,
                 address: dto.address || 'Chưa cập nhật...',
                 reward_amount: dto.reward_amount || 0,
+                discount: dto.discount || 0,
                 advertising_budget: 0,
                 geofence_radius: 100,
                 location: 'POINT(10.776111 106.701111)',
@@ -210,5 +211,23 @@ export class AuthService {
         if (profile) {
             await this.profileRepo.update(profile.id, { is_online: isOnline });
         }
+    }
+
+    async changePassword(userId: string, oldPass: string, newPass: string) {
+        const user = await this.userRepo.findOne({ where: { id: userId } });
+        if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+        const isMatch = await bcrypt.compare(oldPass, user.password_hash);
+        if (!isMatch) {
+            throw new BadRequestException('Mật khẩu cũ không chính xác');
+        }
+
+        const salt = await bcrypt.genSalt();
+        const passwordHash = await bcrypt.hash(newPass, salt);
+
+        user.password_hash = passwordHash;
+        await this.userRepo.save(user);
+
+        return { message: 'Đổi mật khẩu thành công' };
     }
 }
