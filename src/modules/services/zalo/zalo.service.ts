@@ -32,12 +32,11 @@ export class ZaloService {
             );
 
             if (response.data.error !== 0) {
-                // console.error('Zalo ZNS Error Details:', JSON.stringify(response.data));
                 console.log(formattedPhone, templateId, templateData);
                 console.log(accessToken);
                 console.log("cc", response.data);
-                if ((response.data.error === -216 || response.data.error === -201) && !isRetry) {
-                    console.log('Token hết hạn hoặc không hợp lệ, đang thử làm mới...');
+                if ((response.data.error === -216 || response.data.error === -201 || response.data.error === -124) && !isRetry) {
+                    console.log('Token hết hạn hoặc không hợp lệ (-124/-201/-216), đang thử làm mới...');
                     try {
                         await this.refreshAccessToken();
                         return this.sendZns(phoneNumber, templateId, templateData, true);
@@ -46,7 +45,7 @@ export class ZaloService {
                         throw new BadRequestException('Hết phiên đăng nhập Zalo, vui lòng liên hệ Admin');
                     }
                 }
-                throw new BadRequestException(response.data.message || 'Lỗi gửi ZNS');
+                throw new BadRequestException('Lỗi gửi mã xác thực về zalo, vui lòng liên hệ quản trị viên');
             }
 
             return response.data;
@@ -62,20 +61,27 @@ export class ZaloService {
             return cachedToken;
         }
 
-        const envToken = this.configService.get<string>('ZALO_ACCESS_TOKEN');
-        if (envToken) {
-            await this.redis.set('zalo:access_token', envToken, 'EX', 3600);
-            return envToken;
+        try {
+            return await this.refreshAccessToken();
+        } catch (e) {
+            console.warn('Refresh failed, falling back to Env Access Token if available');
+            const envToken = this.configService.get<string>('ZALO_ACCESS_TOKEN');
+            if (envToken) {
+                await this.redis.set('zalo:access_token', envToken, 'EX', 3600);
+                return envToken;
+            }
+            throw e;
         }
-
-        return await this.refreshAccessToken();
     }
 
     private async refreshAccessToken(): Promise<string> {
         let refreshToken = await this.redis.get('zalo:refresh_token');
-
         if (!refreshToken) {
             refreshToken = this.configService.get<string>('ZALO_REFRESH_TOKEN') || null;
+        }
+
+        if (!refreshToken) {
+            throw new BadRequestException('Không tìm thấy Refresh Token');
         }
 
         const appId = this.configService.get<string>('ZALO_APP_ID');
@@ -87,7 +93,7 @@ export class ZaloService {
                 new URLSearchParams({
                     app_id: appId ?? '',
                     grant_type: 'refresh_token',
-                    refresh_token: refreshToken ?? ''
+                    refresh_token: refreshToken
                 }),
                 {
                     headers: {
@@ -97,20 +103,29 @@ export class ZaloService {
                 }
             );
 
-            const { access_token, refresh_token, expires_in } = response.data;
+            const { access_token, refresh_token, expires_in, error_name, error_description } = response.data;
 
-            console.log('at', access_token);
+            if (error_name || !access_token) {
+                console.error('Zalo OAuth Error:', response.data);
+                console.log(error_description);
+                throw new Error('Lỗi khi lấy access token từ Zalo');
+            }
+
+            console.log('Đã refresh Access Token thành công!');
+
             if (access_token) {
                 const expiresInProp = expires_in ? parseInt(expires_in) - 60 : 3600;
                 await this.redis.set('zalo:access_token', access_token, 'EX', expiresInProp);
             }
+
             if (refresh_token) {
                 await this.redis.set('zalo:refresh_token', refresh_token, 'EX', 30 * 24 * 60 * 60);
+                console.log('Đã cập nhật Refresh Token mới vào Redis');
             }
 
             return access_token;
         } catch (error) {
-            console.error('Refresh Token Error:', error?.response?.data || error.message);
+            console.error('Refresh Token Failed Details:', error?.response?.data || error.message);
             throw new BadRequestException('Không thể làm mới Zalo Token');
         }
     }

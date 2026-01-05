@@ -2,6 +2,7 @@ import { UserRole } from "src/utils/user-role.enum";
 
 export class UpdateUserDto {
     full_name?: string;
+    username?: string;
     password?: string;
     is_active?: boolean;
 

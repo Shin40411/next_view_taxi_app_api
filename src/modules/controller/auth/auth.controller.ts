@@ -87,4 +87,16 @@ export class AuthController {
     async changePassword(@Request() req, @Body() body: ChangePasswordDto) {
         return this.authService.changePassword(req.user.sub, body.oldPassword, body.newPassword);
     }
+
+    @Post('request-contract-otp')
+    @UseGuards(AuthGuard)
+    async requestContractOtp(@Request() req) {
+        return this.authService.requestContractOtp(req.user.sub);
+    }
+
+    @Post('verify-contract-otp')
+    @UseGuards(AuthGuard)
+    async verifyContractOtp(@Request() req, @Body() body: { otp: string }) {
+        return this.authService.verifyContractOtp(req.user.sub, body.otp);
+    }
 }

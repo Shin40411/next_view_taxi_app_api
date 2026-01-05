@@ -230,4 +230,38 @@ export class AuthService {
 
         return { message: 'Đổi mật khẩu thành công' };
     }
+    async requestContractOtp(userId: string) {
+        const user = await this.userRepo.findOne({ where: { id: userId } });
+        if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store OTP with userId as key for consistency with the method arg
+        await this.redis.set(`contract_otp:${userId}`, otp, 'EX', 300);
+
+        const templateId = this.configService.get<string>('ZALO_TEMPLATE_ID_OTP');
+        if (!templateId) {
+            throw new Error('Missing ZALO_TEMPLATE_ID_OTP configuration');
+        }
+
+        // Send to user.username (phone number)
+        await this.zaloService.sendZns(user.username, templateId, {
+            otp: otp,
+            customer_name: user.full_name
+        });
+
+        return { message: 'Mã OTP đã được gửi qua Zalo' };
+    }
+
+    async verifyContractOtp(userId: string, otp: string) {
+        const storedOtp = await this.redis.get(`contract_otp:${userId}`);
+
+        if (!storedOtp || storedOtp !== otp) {
+            throw new BadRequestException('Mã OTP không chính xác hoặc đã hết hạn');
+        }
+
+        await this.redis.del(`contract_otp:${userId}`);
+
+        return { message: 'Xác thực OTP thành công' };
+    }
 }

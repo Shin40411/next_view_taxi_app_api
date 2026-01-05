@@ -155,6 +155,7 @@ export class AdminService {
         }
 
         // Update common fields
+        if (dto.username) user.username = dto.username;
         if (dto.full_name) user.full_name = dto.full_name;
         // if (dto.is_active !== undefined) user.is_active = dto.is_active;
         if (dto.password) {
