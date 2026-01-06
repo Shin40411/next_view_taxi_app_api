@@ -11,6 +11,7 @@ import { PointTransaction } from './entities/point-transaction.entity';
 import { BankAccount } from './entities/bank-account.entity';
 import { Notification } from './entities/notification.entity';
 import { Contract } from './entities/contract.entity';
+import { WalletTransaction } from './entities/wallet-transaction.entity';
 import { SeedController } from './seed/seed.controller';
 import { TripsController } from './modules/controller/trips/trips.controller';
 import { TripsService } from './modules/services/trips/trips.service';
@@ -45,12 +46,12 @@ import { VietmapService } from './utils/vietmap.service';
       password: process.env.DB_PASSWORD!,
       database: process.env.DB_NAME || 'taxi_app_db',
 
-      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Notification, Contract],
+      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Notification, Contract, WalletTransaction],
       synchronize: true,
       legacySpatialSupport: false,
     }),
 
-    TypeOrmModule.forFeature([User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Contract]),
+    TypeOrmModule.forFeature([User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Contract, WalletTransaction]),
     AuthModule,
     SocketModule,
     NotificationModule,

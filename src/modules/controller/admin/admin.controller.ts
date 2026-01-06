@@ -3,14 +3,24 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { CreateUserDto, UpdateUserDto, AdminChangePasswordDto } from 'src/modules/dtos/register-user.dto';
+import { UpdateTransactionStatusDto } from 'src/modules/dtos/wallet.dto';
 import { UserRole } from 'src/utils/user-role.enum';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { AdminService } from 'src/modules/services/admin/admin.service';
+import { WalletService } from 'src/modules/services/wallet/wallet.service';
+import { TransactionStatus } from 'src/utils/wallet-transaction-enum';
 
 @Controller('admin')
 @UseGuards(AuthGuard)
 export class AdminController {
-    constructor(private readonly adminService: AdminService) { }
+    constructor(
+        private readonly adminService: AdminService,
+        private readonly walletService: WalletService
+    ) { }
+    @Put('wallet-transactions/status')
+    async updateTransactionStatus(@Request() req, @Body() body: UpdateTransactionStatusDto) {
+        return this.walletService.updateTransactionStatus(body.transactionId, body.accept, req.user.sub, body.reason);
+    }
 
     @Get('users')
     async getUsers(

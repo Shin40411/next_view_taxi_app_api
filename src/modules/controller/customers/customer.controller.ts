@@ -1,11 +1,45 @@
-import { Controller, Get, Query, Param, Request, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Param, Request, Post, Body, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { CustomerService } from 'src/modules/services/customers/customer.service';
+import { WalletService } from 'src/modules/services/wallet/wallet.service';
+import { CreateDepositDto, CreateTransferDto } from 'src/modules/dtos/wallet.dto';
 
 @Controller('customer')
 @UseGuards(AuthGuard)
 export class CustomerController {
-    constructor(private readonly customerService: CustomerService) { }
+    constructor(
+        private readonly customerService: CustomerService,
+        private readonly walletService: WalletService
+    ) { }
+
+    @Post('wallet/deposit')
+    @UseInterceptors(FileInterceptor('bill', {
+        storage: diskStorage({
+            destination: './uploads/bills',
+            filename: (req, file, cb) => {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const ext = extname(file.originalname);
+                cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+            },
+        }),
+    }))
+    async requestDeposit(@Request() req, @Body() body: CreateDepositDto, @UploadedFile() file: Express.Multer.File) {
+        if (file) {
+            body.bill = file.path;
+        }
+        if (body.amount) {
+            body.amount = Number(body.amount);
+        }
+        return this.walletService.requestDeposit(req.user.sub, body);
+    }
+
+    @Post('wallet/transfer')
+    async transfer(@Request() req, @Body() body: CreateTransferDto) {
+        return this.walletService.transfer(req.user.sub, body);
+    }
 
     @Get('pending-requests')
     async getPendingRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {

@@ -1,11 +1,26 @@
 import { Body, Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { PartnerService } from 'src/modules/services/partners/partner.service';
+import { WalletService } from 'src/modules/services/wallet/wallet.service';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { CreateWithdrawDto, CreateTransferDto } from 'src/modules/dtos/wallet.dto';
 
 @Controller('partner')
 @UseGuards(AuthGuard)
 export class PartnerController {
-    constructor(private readonly partnerService: PartnerService) { }
+    constructor(
+        private readonly partnerService: PartnerService,
+        private readonly walletService: WalletService
+    ) { }
+
+    @Post('wallet/withdraw')
+    async requestWithdraw(@Request() req, @Body() body: CreateWithdrawDto) {
+        return this.walletService.requestWithdraw(req.user.sub, body);
+    }
+
+    @Post('wallet/transfer')
+    async transfer(@Request() req, @Body() body: CreateTransferDto) {
+        return this.walletService.transfer(req.user.sub, body);
+    }
 
     @Get('stats')
     async getStats(
@@ -14,6 +29,7 @@ export class PartnerController {
     ) {
         return this.partnerService.getStatistics(req.user.sub, range);
     }
+    // ...
 
     @Get('home')
     async getHomeStats(@Request() req) {
