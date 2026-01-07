@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { V2, V3, V4 } from 'paseto';
 import Redis from 'ioredis';
 import * as bcrypt from 'bcrypt';
@@ -33,6 +33,10 @@ export class AuthService {
     }
 
     async register(dto: RegisterDto) {
+        if (dto.role === UserRole.ACCOUNTANT) {
+            throw new ForbiddenException('Cannot register as ACCOUNTANT via public API');
+        }
+
         // if (dto.role === UserRole.PARTNER) {
         //     if (!dto.id_card_front || !dto.id_card_back) {
         //         throw new BadRequestException('Đối tác bắt buộc phải có ảnh CCCD mặt trước và sau');
