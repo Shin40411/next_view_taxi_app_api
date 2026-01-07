@@ -2,6 +2,7 @@ import { UserRole } from "src/utils/user-role.enum";
 
 export class UpdateUserDto {
     full_name?: string;
+    avatar?: string;
     username?: string;
     password?: string;
     is_active?: boolean;
@@ -23,6 +24,7 @@ export class UpdateUserDto {
     latitude?: number;
     longitude?: number;
     province?: string;
+    contract?: string;
 
     // Bank Account
     bank_name?: string;

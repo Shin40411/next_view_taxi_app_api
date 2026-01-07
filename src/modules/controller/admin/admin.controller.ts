@@ -51,11 +51,17 @@ export class AdminController {
         { name: 'id_card_back', maxCount: 1 },
         { name: 'driver_license_front', maxCount: 1 },
         { name: 'driver_license_back', maxCount: 1 },
+        { name: 'contract', maxCount: 1 },
+        { name: 'avatar', maxCount: 1 },
     ], {
         storage: diskStorage({
             destination: (req, file, cb) => {
                 if (file.fieldname.startsWith('driver_license')) {
                     cb(null, './uploads/driver_license');
+                } else if (file.fieldname === 'contract') {
+                    cb(null, './uploads/contracts');
+                } else if (file.fieldname === 'avatar') {
+                    cb(null, './uploads/avatars');
                 } else {
                     cb(null, './uploads/partners');
                 }
@@ -73,13 +79,17 @@ export class AdminController {
             id_card_front?: Express.Multer.File[],
             id_card_back?: Express.Multer.File[],
             driver_license_front?: Express.Multer.File[],
-            driver_license_back?: Express.Multer.File[]
+            driver_license_back?: Express.Multer.File[],
+            contract?: Express.Multer.File[],
+            avatar?: Express.Multer.File[]
         }
     ) {
         if (files?.id_card_front?.[0]) body.id_card_front = files.id_card_front[0].path;
         if (files?.id_card_back?.[0]) body.id_card_back = files.id_card_back[0].path;
         if (files?.driver_license_front?.[0]) body.driver_license_front = files.driver_license_front[0].path;
         if (files?.driver_license_back?.[0]) body.driver_license_back = files.driver_license_back[0].path;
+        if (files?.contract?.[0]) body.contract = files.contract[0].path;
+        if (files?.avatar?.[0]) body.avatar = files.avatar[0].path;
 
         return this.adminService.createUser(body);
     }
@@ -90,11 +100,17 @@ export class AdminController {
         { name: 'id_card_back', maxCount: 1 },
         { name: 'driver_license_front', maxCount: 1 },
         { name: 'driver_license_back', maxCount: 1 },
+        { name: 'contract', maxCount: 1 },
+        { name: 'avatar', maxCount: 1 },
     ], {
         storage: diskStorage({
             destination: (req, file, cb) => {
                 if (file.fieldname.startsWith('driver_license')) {
                     cb(null, './uploads/driver_license');
+                } else if (file.fieldname === 'contract') {
+                    cb(null, './uploads/contracts');
+                } else if (file.fieldname === 'avatar') {
+                    cb(null, './uploads/avatars');
                 } else {
                     cb(null, './uploads/partners');
                 }
@@ -113,13 +129,17 @@ export class AdminController {
             id_card_front?: Express.Multer.File[],
             id_card_back?: Express.Multer.File[],
             driver_license_front?: Express.Multer.File[],
-            driver_license_back?: Express.Multer.File[]
+            driver_license_back?: Express.Multer.File[],
+            contract?: Express.Multer.File[],
+            avatar?: Express.Multer.File[]
         }
     ) {
         if (files?.id_card_front?.[0]) body.id_card_front = files.id_card_front[0].path;
         if (files?.id_card_back?.[0]) body.id_card_back = files.id_card_back[0].path;
         if (files?.driver_license_front?.[0]) body.driver_license_front = files.driver_license_front[0].path;
         if (files?.driver_license_back?.[0]) body.driver_license_back = files.driver_license_back[0].path;
+        if (files?.contract?.[0]) body.contract = files.contract[0].path;
+        if (files?.avatar?.[0]) body.avatar = files.avatar[0].path;
 
         return this.adminService.updateUser(id, body);
     }

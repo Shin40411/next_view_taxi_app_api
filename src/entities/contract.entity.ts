@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './user.entity';
+import { ContractStatus } from 'src/utils/contract-status.enum';
 
 @Entity('contracts')
 export class Contract {
@@ -36,4 +37,11 @@ export class Contract {
 
     @CreateDateColumn()
     created_at: Date;
+
+    @Column({
+        type: 'enum',
+        enum: ContractStatus,
+        default: ContractStatus.ACTIVE,
+    })
+    status: ContractStatus;
 }

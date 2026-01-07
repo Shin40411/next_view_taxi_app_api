@@ -4,6 +4,7 @@ export class CreateUserDto {
     username: string;
     password: string;
     full_name: string;
+    avatar?: string;
     role: UserRole;
     vehicle_plate?: string;
     brand?: string;
@@ -24,4 +25,5 @@ export class CreateUserDto {
     bank_name?: string;
     account_number?: string;
     account_holder_name?: string;
+    contract?: string;
 }

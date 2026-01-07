@@ -22,6 +22,9 @@ export class User {
     @Column({ type: 'varchar', nullable: true })
     tax_id: string | null;
 
+    @Column({ type: 'varchar', nullable: true })
+    avatar: string | null;
+
     @Column({ type: 'enum', enum: UserRole, default: UserRole.PARTNER })
     role: UserRole;
 

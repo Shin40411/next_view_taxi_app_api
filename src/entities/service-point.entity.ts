@@ -34,6 +34,9 @@ export class ServicePoint {
     @Column({ type: 'int', default: 0, nullable: true })
     discount: number;
 
+    @Column({ nullable: true })
+    contract: string;
+
     @ManyToOne(() => User)
     @JoinColumn({ name: 'owner_id' })
     owner: User;

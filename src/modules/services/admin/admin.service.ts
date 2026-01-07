@@ -91,7 +91,9 @@ export class AdminService {
             password_hash: hashedPassword,
             full_name: dto.full_name,
             role: dto.role,
+
             tax_id: dto.tax_id,
+            avatar: dto.avatar,
         });
 
         const savedUser = await this.userRepo.save(newUser);
@@ -126,6 +128,7 @@ export class AdminService {
                 geofence_radius: dto.geofence_radius !== undefined ? Number(dto.geofence_radius) : 100,
                 location: `POINT(${latitude} ${longitude})`,
                 province: dto.province,
+                contract: dto.contract,
             });
             await this.serviceRepo.save(servicePoint);
         }
@@ -161,6 +164,7 @@ export class AdminService {
         if (dto.password) {
             user.password_hash = await bcrypt.hash(dto.password, 10);
         }
+        if (dto.avatar) user.avatar = dto.avatar;
 
         await this.userRepo.save(user);
 
@@ -194,6 +198,7 @@ export class AdminService {
             if (dto.latitude && dto.longitude) {
                 servicePoint.location = `POINT(${dto.latitude} ${dto.longitude})`;
             }
+            if (dto.contract) servicePoint.contract = dto.contract;
 
             await this.serviceRepo.save(servicePoint);
         }

@@ -34,7 +34,6 @@ export class ZaloService {
             if (response.data.error !== 0) {
                 console.log(formattedPhone, templateId, templateData);
                 console.log(accessToken);
-                console.log("cc", response.data);
                 if ((response.data.error === -216 || response.data.error === -201 || response.data.error === -124) && !isRetry) {
                     console.log('Token hết hạn hoặc không hợp lệ (-124/-201/-216), đang thử làm mới...');
                     try {

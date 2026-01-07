@@ -43,10 +43,26 @@ export class WalletService {
         return phone.substring(0, 3) + '****' + phone.substring(phone.length - 3);
     }
 
+    private sanitizeTransaction(transaction: WalletTransaction): WalletTransaction {
+        if (transaction.sender) {
+            delete (transaction.sender as any).password_hash;
+            delete (transaction.sender as any).tax_id;
+            delete (transaction.sender as any).role;
+        }
+        if (transaction.receiver) {
+            delete (transaction.receiver as any).password_hash;
+            delete (transaction.receiver as any).tax_id;
+            delete (transaction.receiver as any).role;
+        }
+        return transaction;
+    }
+
     async findAll(page: number = 1, limit: number = 10, search?: string, fromDate?: string, toDate?: string) {
         const query = this.walletTransactionRepository.createQueryBuilder('wt')
             .leftJoinAndSelect('wt.sender', 'sender')
+            .leftJoinAndSelect('sender.bankAccount', 'senderBankAccount')
             .leftJoinAndSelect('wt.receiver', 'receiver')
+            .leftJoinAndSelect('receiver.bankAccount', 'receiverBankAccount')
             .orderBy('wt.created_at', 'DESC');
 
         if (search) {
@@ -73,8 +89,10 @@ export class WalletService {
             .take(limit)
             .getManyAndCount();
 
+        const sanitizedData = data.map(tx => this.sanitizeTransaction(tx));
+
         return {
-            data,
+            data: sanitizedData,
             total,
             page,
             limit,
@@ -85,7 +103,9 @@ export class WalletService {
     async findByUser(userId: string, page: number = 1, limit: number = 10, search?: string, fromDate?: string, toDate?: string) {
         const query = this.walletTransactionRepository.createQueryBuilder('wt')
             .leftJoinAndSelect('wt.sender', 'sender')
+            .leftJoinAndSelect('sender.bankAccount', 'senderBankAccount')
             .leftJoinAndSelect('wt.receiver', 'receiver')
+            .leftJoinAndSelect('receiver.bankAccount', 'receiverBankAccount')
             .where('(sender.id = :userId OR receiver.id = :userId)', { userId })
             .orderBy('wt.created_at', 'DESC');
 
@@ -113,11 +133,12 @@ export class WalletService {
             .take(limit)
             .getManyAndCount();
 
-        // Mask phone numbers
+        // Mask phone numbers and sanitize
         const maskedData = data.map(tx => {
             if (tx.sender) tx.sender.username = this.maskPhone(tx.sender.username);
             if (tx.receiver) tx.receiver.username = this.maskPhone(tx.receiver.username);
-            return tx;
+
+            return this.sanitizeTransaction(tx);
         });
 
         return {

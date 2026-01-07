@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import { Contract } from 'src/entities/contract.entity';
 import { CreateContractDto } from 'src/modules/dtos/create-contract.dto';
 import { User } from 'src/entities/user.entity';
+import { ContractStatus } from 'src/utils/contract-status.enum';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class ContractService {
@@ -42,5 +44,14 @@ export class ContractService {
             limit,
             totalPages: Math.ceil(total / limit),
         };
+    }
+    async terminate(id: string): Promise<Contract> {
+        const contract = await this.contractRepository.findOne({ where: { id } });
+        if (!contract) {
+            throw new NotFoundException('Không tìm thấy dữ liệu hợp đồng');
+        }
+
+        contract.status = ContractStatus.TERMINATED;
+        return this.contractRepository.save(contract);
     }
 }
