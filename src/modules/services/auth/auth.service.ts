@@ -33,14 +33,14 @@ export class AuthService {
     }
 
     async register(dto: RegisterDto) {
-        if (dto.role === UserRole.PARTNER) {
-            if (!dto.id_card_front || !dto.id_card_back) {
-                throw new BadRequestException('Đối tác bắt buộc phải có ảnh CCCD mặt trước và sau');
-            }
-            if (!dto.vehicle_plate) {
-                throw new BadRequestException('Đối tác bắt buộc phải có biển số xe');
-            }
-        }
+        // if (dto.role === UserRole.PARTNER) {
+        //     if (!dto.id_card_front || !dto.id_card_back) {
+        //         throw new BadRequestException('Đối tác bắt buộc phải có ảnh CCCD mặt trước và sau');
+        //     }
+        //     if (!dto.vehicle_plate) {
+        //         throw new BadRequestException('Đối tác bắt buộc phải có biển số xe');
+        //     }
+        // }
 
         if (dto.role === UserRole.CUSTOMER) {
             if (!dto.tax_id) {
