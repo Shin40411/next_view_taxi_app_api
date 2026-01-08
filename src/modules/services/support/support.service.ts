@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { SupportTicket, TicketStatus } from 'src/entities/support-ticket.entity';
 import { CreateTicketDto, ReplyTicketDto } from 'src/modules/dtos/support.dto';
 import { User } from 'src/entities/user.entity';
+import { NotificationService } from 'src/modules/services/notification/notification.service';
 
 @Injectable()
 export class SupportService {
@@ -12,6 +13,7 @@ export class SupportService {
         private ticketRepo: Repository<SupportTicket>,
         @InjectRepository(User)
         private userRepo: Repository<User>,
+        private notificationService: NotificationService,
     ) { }
 
     async createTicket(userId: string, dto: CreateTicketDto) {
@@ -63,12 +65,20 @@ export class SupportService {
     }
 
     async replyTicket(ticketId: string, dto: ReplyTicketDto) {
-        const ticket = await this.ticketRepo.findOne({ where: { id: ticketId } });
+        const ticket = await this.ticketRepo.findOne({ where: { id: ticketId }, relations: ['user'] });
         if (!ticket) throw new NotFoundException('Ticket not found');
 
         ticket.admin_reply = dto.content;
         ticket.status = TicketStatus.RESOLVED;
 
-        return this.ticketRepo.save(ticket);
+        const savedTicket = await this.ticketRepo.save(ticket);
+
+        await this.notificationService.createForUser(ticket.user.id, {
+            title: 'Phản hồi hỗ trợ',
+            body: `Admin đã trả lời yêu cầu hỗ trợ của bạn: ${ticket.subject}`,
+            type: 'system',
+        });
+
+        return savedTicket;
     }
 }

@@ -1,33 +1,39 @@
-import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TransactionStatus } from 'src/utils/wallet-transaction-enum';
 
 export class CreateDepositDto {
     @IsNumber()
     @Min(10000)
+    //@Max(1000000000) // 1 billion VND max?
     @Type(() => Number)
     amount: number;
 
     @IsOptional()
     @IsString()
+    @MaxLength(255)
     bill?: string;
 }
 
 export class CreateWithdrawDto {
     @IsNumber()
     @Min(50000)
+    //@Max(1000000000)
     amount: number;
 
     @IsOptional()
     @IsString()
+    @MaxLength(100)
     bankName?: string;
 
     @IsOptional()
     @IsString()
+    @MaxLength(50)
     accountNumber?: string;
 
     @IsOptional()
     @IsString()
+    @MaxLength(100)
     accountHolderName?: string;
 }
 
@@ -38,10 +44,12 @@ export class CreateTransferDto {
 
     @IsNumber()
     @Min(10000)
+    //@Max(1000000000)
     amount: number;
 
     @IsOptional()
     @IsString()
+    @MaxLength(500)
     description?: string;
 }
 
@@ -56,5 +64,6 @@ export class UpdateTransactionStatusDto {
 
     @IsOptional()
     @IsString()
+    @MaxLength(255)
     reason?: string;
 }

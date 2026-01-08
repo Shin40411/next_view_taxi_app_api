@@ -5,11 +5,14 @@ import { User } from 'src/entities/user.entity';
 import { SupportController } from 'src/modules/controller/support/support.controller';
 import { SupportService } from 'src/modules/services/support/support.service';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationModule } from 'src/modules/notification/notification.module';
+
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([SupportTicket, User]),
-        AuthModule
+        AuthModule,
+        NotificationModule
     ],
     controllers: [SupportController],
     providers: [SupportService],

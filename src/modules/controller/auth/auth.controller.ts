@@ -4,10 +4,12 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { RegisterDto, ChangePasswordDto } from 'src/modules/dtos/register-user.dto';
+import { LoginDto } from 'src/modules/dtos/login.dto';
 import { AuthService } from 'src/modules/services/auth/auth.service';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
 import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 import { GoogleAuthGuard } from 'src/modules/auth/google-auth.guard';
+import { ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from 'src/modules/dtos/forgot-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -60,7 +62,7 @@ export class AuthController {
     }
 
     @Post('login')
-    async login(@Body() body: any) {
+    async login(@Body() body: LoginDto) {
         return this.authService.login(body.username, body.password);
     }
 
@@ -71,17 +73,17 @@ export class AuthController {
     }
 
     @Post('forgot-password')
-    async forgotPassword(@Body() body: { username: string }) {
+    async forgotPassword(@Body() body: ForgotPasswordDto) {
         return this.authService.requestPasswordReset(body.username);
     }
 
     @Post('verify-otp')
-    async verifyOtp(@Body() body: { username: string, otp: string }) {
+    async verifyOtp(@Body() body: VerifyOtpDto) {
         return this.authService.verifyOtp(body.username, body.otp);
     }
 
     @Post('reset-password')
-    async resetPassword(@Body() body: { username: string, otp: string, newPassword: string }) {
+    async resetPassword(@Body() body: ResetPasswordDto) {
         return this.authService.confirmPasswordReset(body.username, body.otp, body.newPassword);
     }
 

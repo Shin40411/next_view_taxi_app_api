@@ -3,6 +3,7 @@ import { SettingsService } from './settings.service';
 import { Setting } from '../../entities/setting.entity';
 import { AuthGuard } from '../auth/auth.guard';
 import { UserRole } from '../../utils/user-role.enum';
+import { UpdateSettingsDto } from '../dtos/update-settings.dto';
 
 @Controller('settings')
 @UseGuards(AuthGuard)
@@ -15,8 +16,10 @@ export class SettingsController {
         return this.settingsService.getSettings();
     }
 
+
+
     @Put()
-    async updateSettings(@Request() req, @Body() data: Partial<Setting>): Promise<Setting> {
+    async updateSettings(@Request() req, @Body() data: UpdateSettingsDto): Promise<Setting> {
         if (req.user.role !== UserRole.ADMIN) throw new ForbiddenException('Admin access required');
         return this.settingsService.updateSettings(data);
     }
