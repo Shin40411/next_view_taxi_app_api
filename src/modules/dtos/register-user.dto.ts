@@ -9,6 +9,8 @@ export class RegisterDto {
     username: string;
     password: string;
     full_name: string;
+    email?: string;
+    phone_number?: string;
     role: UserRole;
     vehicle_plate?: string;
     id_card_front?: string;

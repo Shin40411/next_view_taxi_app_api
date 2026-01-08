@@ -1,10 +1,13 @@
-import { Controller, Post, Body, UseGuards, Request, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, UseInterceptors, UploadedFiles, Get, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { RegisterDto, ChangePasswordDto } from 'src/modules/dtos/register-user.dto';
 import { AuthService } from 'src/modules/services/auth/auth.service';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
+import { GoogleAuthGuard } from 'src/modules/auth/google-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -98,5 +101,17 @@ export class AuthController {
     @UseGuards(AuthGuard)
     async verifyContractOtp(@Request() req, @Body() body: { otp: string }) {
         return this.authService.verifyContractOtp(req.user.sub, body.otp);
+    }
+
+    @Get('google')
+    @UseGuards(GoogleAuthGuard)
+    async googleAuth(@Request() req) { }
+
+    @Get('google/callback')
+    @UseGuards(PassportAuthGuard('google'))
+    async googleAuthRedirect(@Request() req, @Res() res: Response) {
+        const data = await this.authService.handleGoogleLogin(req.user);
+        const frontendUrl = process.env.FRONTEND_URL || 'https://goxu.vn';
+        return res.redirect(`${frontendUrl}/auth/jwt/login?accessToken=${data.access_token}&userId=${data.user_id}&role=${data.role}&username=${data.username}&fullName=${encodeURIComponent(data.full_name)}`);
     }
 }

@@ -32,6 +32,7 @@ export class AdminService {
         query.leftJoinAndSelect('user.partnerProfile', 'partnerProfile');
         query.leftJoinAndSelect('user.servicePoints', 'servicePoints');
         query.leftJoinAndSelect('user.bankAccount', 'bankAccount');
+        query.leftJoinAndSelect('user.contracts', 'contracts');
 
         if (search) {
             query.andWhere('(user.full_name LIKE :search OR user.username LIKE :search)', { search: `%${search}%` });
@@ -88,6 +89,8 @@ export class AdminService {
         const hashedPassword = await bcrypt.hash(dto.password, 10);
         const newUser = this.userRepo.create({
             username: dto.username,
+            email: dto.email,
+            phone_number: dto.phone_number || (dto.username.match(/^\d+$/) ? dto.username : null), // Try to set phone from username if digit-only, or explicit field
             password_hash: hashedPassword,
             full_name: dto.full_name,
             role: dto.role,
@@ -158,7 +161,13 @@ export class AdminService {
         }
 
         // Update common fields
-        if (dto.username) user.username = dto.username;
+        if (dto.username) {
+            user.username = dto.username;
+            // Also update phone_number if username looks like a phone and no explicit phone update provided?
+            // Better stick to explicit updates for now to avoid side effects.
+        }
+        if (dto.phone_number) user.phone_number = dto.phone_number;
+        if (dto.email) user.email = dto.email;
         if (dto.full_name) user.full_name = dto.full_name;
         // if (dto.is_active !== undefined) user.is_active = dto.is_active;
         if (dto.password) {

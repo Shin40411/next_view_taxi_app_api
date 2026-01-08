@@ -4,6 +4,8 @@ export class UpdateUserDto {
     full_name?: string;
     avatar?: string;
     username?: string;
+    email?: string;
+    phone_number?: string;
     password?: string;
     is_active?: boolean;
 

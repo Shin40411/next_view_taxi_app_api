@@ -3,6 +3,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { User } from './entities/user.entity';
 import { PartnerProfile } from './entities/partner-profile.entity';
 import { ServicePoint } from './entities/service-point.entity';
@@ -12,6 +13,8 @@ import { BankAccount } from './entities/bank-account.entity';
 import { Notification } from './entities/notification.entity';
 import { Contract } from './entities/contract.entity';
 import { WalletTransaction } from './entities/wallet-transaction.entity';
+import { Setting } from './entities/setting.entity';
+
 import { SeedController } from './seed/seed.controller';
 import { TripsController } from './modules/controller/trips/trips.controller';
 import { TripsService } from './modules/services/trips/trips.service';
@@ -25,9 +28,13 @@ import { ContractController } from './modules/controller/contract/contract.contr
 import { ContractService } from './modules/services/contract/contract.service';
 import { WalletController } from './modules/controller/wallet/wallet.controller';
 import { WalletService } from './modules/services/wallet/wallet.service';
+
 import { AuthModule } from './modules/auth/auth.module';
 import { SocketModule } from './modules/socket/socket.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { SupportModule } from './modules/support/support.module';
+import { SupportTicket } from './entities/support-ticket.entity';
 
 import { VietmapService } from './utils/vietmap.service';
 
@@ -46,7 +53,7 @@ import { VietmapService } from './utils/vietmap.service';
       password: process.env.DB_PASSWORD!,
       database: process.env.DB_NAME || 'taxi_app_db',
 
-      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Notification, Contract, WalletTransaction],
+      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Notification, Contract, WalletTransaction, Setting, SupportTicket],
       synchronize: true,
       legacySpatialSupport: false,
     }),
@@ -55,6 +62,8 @@ import { VietmapService } from './utils/vietmap.service';
     AuthModule,
     SocketModule,
     NotificationModule,
+    SettingsModule,
+    SupportModule,
   ],
   controllers: [SeedController, TripsController, AdminController, PartnerController, CustomerController, ContractController, WalletController],
   providers: [TripsService, AdminService, PartnerService, CustomerService, VietmapService, ContractService, WalletService],

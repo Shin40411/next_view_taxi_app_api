@@ -12,6 +12,8 @@ import { User } from 'src/entities/user.entity';
 import { RegisterDto } from 'src/modules/dtos/register-user.dto';
 
 import { ZaloService } from 'src/modules/services/zalo/zalo.service';
+import { SettingsService } from 'src/modules/settings/settings.service';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -24,10 +26,12 @@ export class AuthService {
         @InjectRepository(ServicePoint) private serviceRepo: Repository<ServicePoint>,
         private configService: ConfigService,
         private zaloService: ZaloService,
+        private settingsService: SettingsService,
+        private mailService: MailService,
     ) {
         const keyHex = this.configService.get<string>('PASETO_SECRET');
         if (!keyHex) {
-            throw new Error('Missing PASETO_SECRET in .env file');
+            throw new Error('Missing PASETO_SECRET');
         }
         this.secretKey = Buffer.from(keyHex, 'hex');
     }
@@ -52,8 +56,20 @@ export class AuthService {
             }
         }
 
-        const existingUser = await this.userRepo.findOne({ where: { username: dto.username } });
+        const existingUser = await this.userRepo.findOne({
+            where: [
+                { username: dto.username },
+                { phone_number: dto.username },
+                ...(dto.email ? [{ email: dto.email }] : [])
+            ]
+        });
         if (existingUser) {
+            if (existingUser.username === dto.username || existingUser.phone_number === dto.username) {
+                throw new ConflictException('Số điện thoại này đã được đăng ký');
+            }
+            if (dto.email && existingUser.email === dto.email) {
+                throw new ConflictException('Email này đã được đăng ký');
+            }
             throw new ConflictException('Tài khoản đã tồn tại');
         }
 
@@ -65,6 +81,8 @@ export class AuthService {
             password_hash: passwordHash,
             full_name: dto.full_name,
             role: dto.role || UserRole.CUSTOMER,
+            email: dto.email,
+            phone_number: dto.username,
             tax_id: dto.role === UserRole.CUSTOMER ? dto.tax_id : null,
         });
 
@@ -109,7 +127,12 @@ export class AuthService {
     }
 
     async login(username: string, pass: string) {
-        const user = await this.userRepo.findOne({ where: { username } });
+        const user = await this.userRepo.findOne({
+            where: [
+                { username: username },
+                { email: username }
+            ]
+        });
         if (user) {
             // console.log('Stored password hash:', user.password_hash);
         }
@@ -135,6 +158,119 @@ export class AuthService {
         };
     }
 
+    async handleGoogleLogin(googleUser: any) {
+        const { id, email, firstName, lastName, picture, phone, role } = googleUser;
+
+        let user = await this.userRepo.findOne({
+            where: { google_id: id },
+            relations: ['partnerProfile']
+        });
+
+        if (!user && email) {
+            user = await this.userRepo.findOne({
+                where: { email: email },
+                relations: ['partnerProfile']
+            });
+
+            if (user && !user.google_id) {
+                user.google_id = id;
+                await this.userRepo.save(user);
+            }
+        }
+
+        if (!user && phone) {
+            user = await this.userRepo.findOne({
+                where: { phone_number: phone },
+                relations: ['partnerProfile']
+            });
+            if (user) {
+                if (!user.google_id) user.google_id = id;
+                if (!user.email && email) user.email = email;
+                await this.userRepo.save(user);
+            }
+        }
+
+        if (!user) {
+            user = await this.userRepo.findOne({
+                where: [
+                    { username: email },
+                    ...(phone ? [{ username: phone }] : [])
+                ],
+                relations: ['partnerProfile']
+            });
+
+            if (user) {
+                if (!user.google_id) user.google_id = id;
+                if (!user.email && email) user.email = email;
+                if (!user.phone_number && phone) user.phone_number = phone;
+                await this.userRepo.save(user);
+            }
+        }
+
+        if (user) {
+            if (user.role !== UserRole.PARTNER && user.role !== UserRole.INTRODUCER) {
+                throw new ForbiddenException(
+                    'Tài khoản Google này đã được đăng ký với vai trò Công ty/Admin. Vui lòng đăng nhập bằng mật khẩu hoặc App dành riêng.',
+                );
+            }
+        }
+        else {
+            const randomPass = Math.random().toString(36).slice(-8);
+            const salt = await bcrypt.genSalt();
+            const passwordHash = await bcrypt.hash(randomPass, salt);
+
+            const newUsername = phone ? phone : email;
+
+            user = this.userRepo.create({
+                username: newUsername,
+                google_id: id,
+                email: email,
+                phone_number: phone || null,
+                password_hash: passwordHash,
+                full_name: `${firstName} ${lastName}`,
+                role: role === 'INTRODUCER' ? UserRole.INTRODUCER : UserRole.PARTNER,
+                avatar: picture || null,
+                tax_id: null,
+            });
+
+            user = await this.userRepo.save(user);
+
+            const profile = this.profileRepo.create({
+                user: user,
+                vehicle_plate: '',
+                id_card_front: null,
+                id_card_back: null,
+                driver_license_front: null,
+                driver_license_back: null,
+                is_online: false,
+                wallet_balance: 0,
+                current_location: 'POINT(0 0)',
+            });
+
+            await this.profileRepo.save(profile);
+            user.partnerProfile = profile;
+        }
+
+        const payload = {
+            sub: user.id,
+            role: user.role,
+            exp: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        };
+
+        const token = await V3.encrypt(payload, this.secretKey);
+        await this.redis.set(`auth:${user.id}`, token, 'EX', 7200);
+
+        return {
+            access_token: token,
+            user_id: user.id,
+            role: user.role,
+            full_name: user.full_name,
+            username: user.username,
+            avatar: user.avatar,
+            is_new_google_user: user.partnerProfile?.id_card_front === null
+        };
+    }
+
     async logout(userId: string) {
         await this.redis.del(`auth:${userId}`);
         return { message: 'Đăng xuất thành công' };
@@ -155,24 +291,44 @@ export class AuthService {
     }
 
     async requestPasswordReset(username: string) {
-        const user = await this.userRepo.findOne({ where: { username } });
-        if (!user) throw new NotFoundException('Số điện thoại chưa được đăng ký');
+        const user = await this.userRepo.findOne({
+            where: [
+                { username: username },
+                { phone_number: username },
+                { email: username }
+            ]
+        });
+        if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
         await this.redis.set(`reset_otp:${username}`, otp, 'EX', 300);
 
-        const templateId = this.configService.get<string>('ZALO_TEMPLATE_ID_OTP');
-        if (!templateId) {
-            throw new Error('Missing ZALO_TEMPLATE_ID_OTP configuration');
+        const isEmail = username.includes('@');
+
+        if (isEmail) {
+            await this.mailService.sendOtp(username, otp, user.full_name);
+        } else {
+            const settings = await this.settingsService.getSettings();
+            const templateId = settings?.zalo_template_id_otp;
+
+            if (templateId) {
+                try {
+                    await this.zaloService.sendZns(username, templateId, {
+                        otp: otp,
+                        customer_name: user.full_name
+                    });
+                } catch (error) {
+                    console.error('Failed to send Zalo OTP:', error.message);
+                }
+            }
+
+            if (user.email) {
+                await this.mailService.sendOtp(user.email, otp, user.full_name);
+            }
         }
 
-        await this.zaloService.sendZns(username, templateId, {
-            otp: otp,
-            customer_name: user.full_name
-        });
-
-        return { message: 'Mã OTP đã được gửi qua Zalo' };
+        return { message: 'Mã OTP đã được gửi' };
     }
 
     async verifyOtp(username: string, otp: string) {
@@ -192,7 +348,13 @@ export class AuthService {
             throw new BadRequestException('Mã OTP không chính xác hoặc đã hết hạn');
         }
 
-        const user = await this.userRepo.findOne({ where: { username } });
+        const user = await this.userRepo.findOne({
+            where: [
+                { username: username },
+                { phone_number: username },
+                { email: username }
+            ]
+        });
         if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
         const salt = await bcrypt.genSalt();
@@ -205,6 +367,7 @@ export class AuthService {
 
         return { message: 'Đổi mật khẩu thành công' };
     }
+
     async setPartnerStatus(userId: string, isOnline: boolean) {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         if (!user || (user.role !== UserRole.PARTNER && user.role !== UserRole.INTRODUCER)) {
@@ -234,27 +397,38 @@ export class AuthService {
 
         return { message: 'Đổi mật khẩu thành công' };
     }
+
     async requestContractOtp(userId: string) {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
+        console.log(user);
+
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Store OTP with userId as key for consistency with the method arg
         await this.redis.set(`contract_otp:${userId}`, otp, 'EX', 300);
 
-        const templateId = this.configService.get<string>('ZALO_TEMPLATE_ID_OTP');
-        if (!templateId) {
-            throw new Error('Missing ZALO_TEMPLATE_ID_OTP configuration');
+        const settings = await this.settingsService.getSettings();
+        // console.log(settings);
+        if (user.email) {
+            await this.mailService.sendOtp(user.email, otp, user.full_name);
         }
 
-        // Send to user.username (phone number)
-        await this.zaloService.sendZns(user.username, templateId, {
-            otp: otp,
-            customer_name: user.full_name
-        });
+        const templateId = settings?.zalo_template_id_otp;
+        if (templateId) {
+            try {
+                await this.zaloService.sendZns(user.username, templateId, {
+                    otp: otp,
+                    customer_name: user.full_name
+                });
+            } catch (error) {
+                console.error('Failed to send Zalo Contract OTP:', error.message);
+            }
+        } else {
+            console.warn('Missing Zalo Template ID for Contract OTP');
+        }
 
-        return { message: 'Mã OTP đã được gửi qua Zalo' };
+        return { message: 'Mã OTP đã được gửi qua Zalo và Email (nếu có)' };
     }
 
     async verifyContractOtp(userId: string, otp: string) {

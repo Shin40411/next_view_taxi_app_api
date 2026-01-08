@@ -4,6 +4,8 @@ import { PartnerProfile } from './partner-profile.entity';
 import { ServicePoint } from './service-point.entity';
 import { BankAccount } from './bank-account.entity';
 import { Notification } from './notification.entity';
+import { Contract } from './contract.entity';
+import { SupportTicket } from './support-ticket.entity';
 
 @Entity('users')
 export class User {
@@ -21,6 +23,15 @@ export class User {
 
     @Column({ type: 'varchar', nullable: true })
     tax_id: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    email: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    phone_number: string | null;
+
+    @Column({ type: 'varchar', nullable: true, unique: true })
+    google_id: string | null;
 
     @Column({ type: 'varchar', nullable: true })
     avatar: string | null;
@@ -42,4 +53,10 @@ export class User {
 
     @OneToMany(() => Notification, (notification) => notification.user)
     notifications: Notification[];
+
+    @OneToMany(() => Contract, (contract) => contract.user)
+    contracts: Contract[];
+
+    @OneToMany(() => SupportTicket, (ticket) => ticket.user)
+    supportTickets: SupportTicket[];
 }

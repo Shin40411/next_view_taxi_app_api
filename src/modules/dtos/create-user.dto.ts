@@ -4,6 +4,8 @@ export class CreateUserDto {
     username: string;
     password: string;
     full_name: string;
+    email?: string;
+    phone_number?: string;
     avatar?: string;
     role: UserRole;
     vehicle_plate?: string;
