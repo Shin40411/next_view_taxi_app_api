@@ -82,12 +82,20 @@ export class AdminService {
             throw new ForbiddenException('Cannot create ADMIN user via this API');
         }
 
+        const orConditions: any[] = [
+            { username: dto.username, isDelete: false }
+        ];
+
+        if (dto.email) {
+            orConditions.push({ email: dto.email, isDelete: false });
+        }
+
+        if (dto.phone_number) {
+            orConditions.push({ phone_number: dto.phone_number, isDelete: false });
+        }
+
         const existingUser = await this.userRepo.findOne({
-            where: [
-                { username: dto.username, isDelete: false },
-                { email: dto.email, isDelete: false },
-                { phone_number: dto.phone_number, isDelete: false }
-            ]
+            where: orConditions
         });
         if (existingUser) {
             throw new BadRequestException('Thông tin tài khoản đã tồn tại');
