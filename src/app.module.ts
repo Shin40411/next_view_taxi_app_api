@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { ConfigModule } from '@nestjs/config';
@@ -38,6 +38,9 @@ import { SupportModule } from './modules/support/support.module';
 import { SupportTicket } from './entities/support-ticket.entity';
 
 import { VietmapService } from './utils/vietmap.service';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { EncryptInterceptor } from './common/interceptors/encrypt.interceptor';
+import { DecryptMiddleware } from './common/middlewares/decrypt.middleware';
 
 @Module({
   imports: [
@@ -67,6 +70,24 @@ import { VietmapService } from './utils/vietmap.service';
     SupportModule,
   ],
   controllers: [SeedController, TripsController, AdminController, PartnerController, CustomerController, ContractController, WalletController],
-  providers: [TripsService, AdminService, PartnerService, CustomerService, VietmapService, ContractService, WalletService],
+  providers: [
+    TripsService,
+    AdminService,
+    PartnerService,
+    CustomerService,
+    VietmapService,
+    ContractService,
+    WalletService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: EncryptInterceptor,
+    },
+  ],
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(DecryptMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
+  }
+}
