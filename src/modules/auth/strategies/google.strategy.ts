@@ -8,7 +8,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         super({
             clientID: settings?.google_client_id || 'TEMP_CLIENT_ID',
             clientSecret: settings?.google_client_secret || 'TEMP_CLIENT_SECRET',
-            callbackURL: settings?.google_callback_url || 'http://localhost:3000/api/v1/auth/google/callback',
+            callbackURL: settings?.google_callback_url || 'https://goxu.vn/api/v1/auth/google/callback',
             passReqToCallback: true,
             scope: ['email', 'profile', 'https://www.googleapis.com/auth/user.phonenumbers.read'],
         });

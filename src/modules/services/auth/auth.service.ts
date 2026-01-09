@@ -3,7 +3,7 @@ import { V2, V3, V4 } from 'paseto';
 import Redis from 'ioredis';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Raw } from 'typeorm';
+import { Repository, Raw, DataSource } from 'typeorm';
 import { ServicePoint } from 'src/entities/service-point.entity';
 import { ConfigService } from '@nestjs/config';
 import { UserRole } from 'src/utils/user-role.enum';
@@ -28,6 +28,7 @@ export class AuthService {
         private zaloService: ZaloService,
         private settingsService: SettingsService,
         private mailService: MailService,
+        private dataSource: DataSource,
     ) {
         const keyHex = this.configService.get<string>('PASETO_SECRET');
         if (!keyHex) {
@@ -165,96 +166,106 @@ export class AuthService {
     async handleGoogleLogin(googleUser: any) {
         const { id, email, firstName, lastName, picture, phone, role } = googleUser;
 
+        // 1. Unified Lookup
         let user = await this.userRepo.findOne({
-            where: { google_id: id, isDelete: false },
+            where: [
+                { google_id: id, isDelete: false },
+                ...(email ? [{ email: email, isDelete: false }] : []),
+                ...(phone ? [{ phone_number: phone, isDelete: false }] : [])
+            ],
             relations: ['partnerProfile']
         });
 
-        if (!user && email) {
-            user = await this.userRepo.findOne({
-                where: { email: email, isDelete: false },
-                relations: ['partnerProfile']
-            });
+        // 2. If User Exists -> Update & Login
+        if (user) {
+            let hasUpdates = false;
 
-            if (user && !user.google_id) {
+            if (!user.google_id) {
                 user.google_id = id;
-                await this.userRepo.save(user);
+                hasUpdates = true;
             }
-        }
+            if (!user.email && email) {
+                user.email = email;
+                hasUpdates = true;
+            }
+            if (!user.phone_number && phone) {
+                user.phone_number = phone;
+                hasUpdates = true;
+            }
 
-        if (!user && phone) {
-            user = await this.userRepo.findOne({
-                where: { phone_number: phone, isDelete: false },
-                relations: ['partnerProfile']
-            });
-            if (user) {
-                if (!user.google_id) user.google_id = id;
-                if (!user.email && email) user.email = email;
+            if (hasUpdates) {
                 await this.userRepo.save(user);
             }
+
+            if (![UserRole.PARTNER, UserRole.INTRODUCER, UserRole.CUSTOMER].includes(user.role)) {
+                throw new ForbiddenException('Thông tin đăng nhập đã tồn tại.');
+            }
+
+        } else {
+            // 3. Register New User (Transaction)
+            const createdUser = await this.dataSource.transaction(async (entityManager) => {
+                const randomPass = Math.random().toString(36).slice(-8);
+                const salt = await bcrypt.genSalt();
+                const passwordHash = await bcrypt.hash(randomPass, salt);
+
+                const newUsername = phone ? phone : email;
+                const userRole = role === 'CUSTOMER' ? UserRole.CUSTOMER :
+                    (role === 'INTRODUCER' ? UserRole.INTRODUCER : UserRole.PARTNER);
+
+                const newUser = this.userRepo.create({
+                    username: newUsername,
+                    google_id: id,
+                    email: email,
+                    phone_number: phone || null,
+                    password_hash: passwordHash,
+                    full_name: `${firstName} ${lastName}`,
+                    role: userRole,
+                    avatar: picture || null,
+                    tax_id: null,
+                });
+
+                // Save User
+                const savedUser = await entityManager.save(User, newUser);
+
+                // Create Profile based on Role
+                if (userRole === UserRole.CUSTOMER) {
+                    const servicePoint = this.serviceRepo.create({
+                        owner: savedUser,
+                        name: savedUser.full_name,
+                        address: 'Chưa cập nhật...',
+                        reward_amount: 0,
+                        discount: 0,
+                        advertising_budget: 0,
+                        geofence_radius: 100,
+                        location: 'POINT(10.776111 106.701111)',
+                        province: undefined,
+                    });
+                    await entityManager.save(ServicePoint, servicePoint);
+                } else {
+                    const profile = this.profileRepo.create({
+                        user: savedUser,
+                        vehicle_plate: '',
+                        id_card_front: null,
+                        id_card_back: null,
+                        driver_license_front: null,
+                        driver_license_back: null,
+                        is_online: false,
+                        wallet_balance: 0,
+                        current_location: 'POINT(0 0)',
+                    });
+                    await entityManager.save(PartnerProfile, profile);
+                    savedUser.partnerProfile = profile;
+                }
+                return savedUser;
+            });
+            user = createdUser;
         }
 
         if (!user) {
-            user = await this.userRepo.findOne({
-                where: [
-                    { username: email, isDelete: false },
-                    ...(phone ? [{ username: phone, isDelete: false }] : [])
-                ],
-                relations: ['partnerProfile']
-            });
-
-            if (user) {
-                if (!user.google_id) user.google_id = id;
-                if (!user.email && email) user.email = email;
-                if (!user.phone_number && phone) user.phone_number = phone;
-                await this.userRepo.save(user);
-            }
+            throw new UnauthorizedException('Không thể tạo hoặc tìm thấy người dùng.');
         }
 
-        if (user) {
-            if (user.role !== UserRole.PARTNER && user.role !== UserRole.INTRODUCER) {
-                throw new ForbiddenException(
-                    'Tài khoản Google này đã được đăng ký với vai trò Công ty/Admin. Vui lòng đăng nhập bằng mật khẩu hoặc App dành riêng.',
-                );
-            }
-        }
-        else {
-            const randomPass = Math.random().toString(36).slice(-8);
-            const salt = await bcrypt.genSalt();
-            const passwordHash = await bcrypt.hash(randomPass, salt);
-
-            const newUsername = phone ? phone : email;
-
-            user = this.userRepo.create({
-                username: newUsername,
-                google_id: id,
-                email: email,
-                phone_number: phone || null,
-                password_hash: passwordHash,
-                full_name: `${firstName} ${lastName}`,
-                role: role === 'INTRODUCER' ? UserRole.INTRODUCER : UserRole.PARTNER,
-                avatar: picture || null,
-                tax_id: null,
-            });
-
-            user = await this.userRepo.save(user);
-
-            const profile = this.profileRepo.create({
-                user: user,
-                vehicle_plate: '',
-                id_card_front: null,
-                id_card_back: null,
-                driver_license_front: null,
-                driver_license_back: null,
-                is_online: false,
-                wallet_balance: 0,
-                current_location: 'POINT(0 0)',
-            });
-
-            await this.profileRepo.save(profile);
-            user.partnerProfile = profile;
-        }
-
+        // 4. Generate Token
         const payload = {
             sub: user.id,
             role: user.role,
@@ -264,6 +275,13 @@ export class AuthService {
         const token = await V3.encrypt(payload, this.secretKey);
         await this.redis.set(`auth:${user.id}`, token, 'EX', 7200);
 
+        let isNew = false;
+        if (user.role === UserRole.CUSTOMER) {
+            isNew = false;
+        } else {
+            isNew = !user.partnerProfile || user.partnerProfile.id_card_front === null;
+        }
+
         return {
             access_token: token,
             user_id: user.id,
@@ -271,7 +289,7 @@ export class AuthService {
             full_name: user.full_name,
             username: user.username,
             avatar: user.avatar,
-            is_new_google_user: user.partnerProfile?.id_card_front === null
+            is_new_google_user: isNew
         };
     }
 
