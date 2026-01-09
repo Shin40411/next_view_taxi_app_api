@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsOptional, IsString, MaxLength, IsEnum, IsNumber, IsBoolean } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { UserRole } from "src/utils/user-role.enum";
 
 export class CreateUserDto {
@@ -77,14 +78,17 @@ export class CreateUserDto {
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     latitude?: number;
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     longitude?: number;
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     geofence_radius?: number;
 
     @IsOptional()
@@ -94,14 +98,17 @@ export class CreateUserDto {
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     reward_amount?: number;
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     discount?: number;
 
     @IsOptional()
     @IsBoolean()
+    @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
     is_active?: boolean;
 
     @IsOptional()

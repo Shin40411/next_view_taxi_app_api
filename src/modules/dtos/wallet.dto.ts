@@ -4,8 +4,7 @@ import { TransactionStatus } from 'src/utils/wallet-transaction-enum';
 
 export class CreateDepositDto {
     @IsNumber()
-    @Min(10000)
-    //@Max(1000000000) // 1 billion VND max?
+    @Min(10)
     @Type(() => Number)
     amount: number;
 
@@ -18,7 +17,6 @@ export class CreateDepositDto {
 export class CreateWithdrawDto {
     @IsNumber()
     @Min(50000)
-    //@Max(1000000000)
     amount: number;
 
     @IsOptional()

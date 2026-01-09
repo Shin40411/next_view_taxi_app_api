@@ -35,9 +35,14 @@ export class PartnerController {
         if (file) {
             body.bill = file.path;
         }
-        if (body.amount) {
+
+        // Fallback for amount if not mapped correctly
+        if (body.amount === undefined && req.body.amount) {
+            body.amount = Number(req.body.amount);
+        } else if (body.amount) {
             body.amount = Number(body.amount);
         }
+
         return this.walletService.requestDeposit(req.user.sub, body);
     }
 
