@@ -1,8 +1,11 @@
-import { Body, Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Request, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { PartnerService } from 'src/modules/services/partners/partner.service';
 import { WalletService } from 'src/modules/services/wallet/wallet.service';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
-import { CreateWithdrawDto, CreateTransferDto } from 'src/modules/dtos/wallet.dto';
+import { CreateWithdrawDto, CreateTransferDto, CreateDepositDto } from 'src/modules/dtos/wallet.dto';
 
 @Controller('partner')
 @UseGuards(AuthGuard)
@@ -15,6 +18,27 @@ export class PartnerController {
     @Post('wallet/withdraw')
     async requestWithdraw(@Request() req, @Body() body: CreateWithdrawDto) {
         return this.walletService.requestWithdraw(req.user.sub, body);
+    }
+
+    @Post('wallet/deposit')
+    @UseInterceptors(FileInterceptor('bill', {
+        storage: diskStorage({
+            destination: './uploads/bills',
+            filename: (req, file, cb) => {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const ext = extname(file.originalname);
+                cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+            },
+        }),
+    }))
+    async requestDeposit(@Request() req, @Body() body: CreateDepositDto, @UploadedFile() file: Express.Multer.File) {
+        if (file) {
+            body.bill = file.path;
+        }
+        if (body.amount) {
+            body.amount = Number(body.amount);
+        }
+        return this.walletService.requestDeposit(req.user.sub, body);
     }
 
     @Post('wallet/transfer')

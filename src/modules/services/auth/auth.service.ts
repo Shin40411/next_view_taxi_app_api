@@ -58,9 +58,9 @@ export class AuthService {
 
         const existingUser = await this.userRepo.findOne({
             where: [
-                { username: dto.username },
-                { phone_number: dto.username },
-                ...(dto.email ? [{ email: dto.email }] : [])
+                { username: dto.username, isDelete: false },
+                { phone_number: dto.username, isDelete: false },
+                ...(dto.email ? [{ email: dto.email, isDelete: false }] : [])
             ]
         });
         if (existingUser) {
@@ -141,6 +141,10 @@ export class AuthService {
             throw new UnauthorizedException('Sai tài khoản hoặc mật khẩu');
         }
 
+        if (user.isDelete) {
+            throw new UnauthorizedException('Tài khoản đã bị khoá');
+        }
+
         const payload = {
             sub: user.id,
             role: user.role,
@@ -162,13 +166,13 @@ export class AuthService {
         const { id, email, firstName, lastName, picture, phone, role } = googleUser;
 
         let user = await this.userRepo.findOne({
-            where: { google_id: id },
+            where: { google_id: id, isDelete: false },
             relations: ['partnerProfile']
         });
 
         if (!user && email) {
             user = await this.userRepo.findOne({
-                where: { email: email },
+                where: { email: email, isDelete: false },
                 relations: ['partnerProfile']
             });
 
@@ -180,7 +184,7 @@ export class AuthService {
 
         if (!user && phone) {
             user = await this.userRepo.findOne({
-                where: { phone_number: phone },
+                where: { phone_number: phone, isDelete: false },
                 relations: ['partnerProfile']
             });
             if (user) {
@@ -193,8 +197,8 @@ export class AuthService {
         if (!user) {
             user = await this.userRepo.findOne({
                 where: [
-                    { username: email },
-                    ...(phone ? [{ username: phone }] : [])
+                    { username: email, isDelete: false },
+                    ...(phone ? [{ username: phone, isDelete: false }] : [])
                 ],
                 relations: ['partnerProfile']
             });
@@ -293,9 +297,9 @@ export class AuthService {
     async requestPasswordReset(username: string) {
         const user = await this.userRepo.findOne({
             where: [
-                { username: username },
-                { phone_number: username },
-                { email: username }
+                { username: username, isDelete: false },
+                { phone_number: username, isDelete: false },
+                { email: username, isDelete: false }
             ]
         });
         if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
@@ -350,9 +354,9 @@ export class AuthService {
 
         const user = await this.userRepo.findOne({
             where: [
-                { username: username },
-                { phone_number: username },
-                { email: username }
+                { username: username, isDelete: false },
+                { phone_number: username, isDelete: false },
+                { email: username, isDelete: false }
             ]
         });
         if (!user) throw new NotFoundException('Người dùng không tồn tại');
@@ -369,7 +373,7 @@ export class AuthService {
     }
 
     async setPartnerStatus(userId: string, isOnline: boolean) {
-        const user = await this.userRepo.findOne({ where: { id: userId } });
+        const user = await this.userRepo.findOne({ where: { id: userId, isDelete: false } });
         if (!user || (user.role !== UserRole.PARTNER && user.role !== UserRole.INTRODUCER)) {
             return;
         }
@@ -381,7 +385,7 @@ export class AuthService {
     }
 
     async changePassword(userId: string, oldPass: string, newPass: string) {
-        const user = await this.userRepo.findOne({ where: { id: userId } });
+        const user = await this.userRepo.findOne({ where: { id: userId, isDelete: false } });
         if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
         const isMatch = await bcrypt.compare(oldPass, user.password_hash);
@@ -399,7 +403,7 @@ export class AuthService {
     }
 
     async requestContractOtp(userId: string) {
-        const user = await this.userRepo.findOne({ where: { id: userId } });
+        const user = await this.userRepo.findOne({ where: { id: userId, isDelete: false } });
         if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
         console.log(user);

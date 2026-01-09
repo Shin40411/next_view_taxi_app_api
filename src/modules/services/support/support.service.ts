@@ -5,6 +5,8 @@ import { SupportTicket, TicketStatus } from 'src/entities/support-ticket.entity'
 import { CreateTicketDto, ReplyTicketDto } from 'src/modules/dtos/support.dto';
 import { User } from 'src/entities/user.entity';
 import { NotificationService } from 'src/modules/services/notification/notification.service';
+import { Faq } from 'src/entities/faq.entity';
+import { CreateFaqDto, UpdateFaqDto } from 'src/modules/dtos/faq.dto';
 
 @Injectable()
 export class SupportService {
@@ -13,6 +15,8 @@ export class SupportService {
         private ticketRepo: Repository<SupportTicket>,
         @InjectRepository(User)
         private userRepo: Repository<User>,
+        @InjectRepository(Faq)
+        private faqRepo: Repository<Faq>,
         private notificationService: NotificationService,
     ) { }
 
@@ -80,5 +84,40 @@ export class SupportService {
         });
 
         return savedTicket;
+    }
+
+    // FAQ
+    async createFaq(dto: CreateFaqDto) {
+        const faq = this.faqRepo.create(dto);
+        return this.faqRepo.save(faq);
+    }
+
+    async getFaqs(page: number = 1, limit: number = 10, search?: string) {
+        const query = this.faqRepo.createQueryBuilder('faq');
+
+        if (search) {
+            query.where('faq.question LIKE :search OR faq.answer LIKE :search', { search: `%${search}%` });
+        }
+
+        query.orderBy('faq.created_at', 'DESC');
+        query.skip((page - 1) * limit);
+        query.take(limit);
+
+        const [data, total] = await query.getManyAndCount();
+        return { data, total };
+    }
+
+    async updateFaq(id: string, dto: UpdateFaqDto) {
+        const faq = await this.faqRepo.findOne({ where: { id } });
+        if (!faq) throw new NotFoundException('FAQ not found');
+
+        Object.assign(faq, dto);
+        return this.faqRepo.save(faq);
+    }
+
+    async deleteFaq(id: string) {
+        const result = await this.faqRepo.delete(id);
+        if (result.affected === 0) throw new NotFoundException('FAQ not found');
+        return { message: 'FAQ deleted successfully' };
     }
 }

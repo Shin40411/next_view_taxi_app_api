@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Request, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Request, UseGuards, Delete, Query } from '@nestjs/common';
 import { NotificationService } from '../../services/notification/notification.service';
 import { AuthGuard } from '../../auth/auth.guard';
 
@@ -8,8 +8,8 @@ export class NotificationController {
     constructor(private readonly notificationService: NotificationService) { }
 
     @Get()
-    async findAll(@Request() req) {
-        return this.notificationService.findAllByUserId(req.user.sub);
+    async findAll(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 10) {
+        return this.notificationService.findAllByUserId(req.user.sub, Number(page), Number(limit));
     }
 
     @Patch(':id/read')

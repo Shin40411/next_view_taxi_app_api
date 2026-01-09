@@ -42,6 +42,9 @@ export class User {
     @CreateDateColumn()
     created_at: Date;
 
+    @Column({ default: false })
+    isDelete: boolean;
+
     @OneToOne(() => PartnerProfile, (profile) => profile.user)
     partnerProfile: PartnerProfile;
 

@@ -14,6 +14,7 @@ import { Notification } from './entities/notification.entity';
 import { Contract } from './entities/contract.entity';
 import { WalletTransaction } from './entities/wallet-transaction.entity';
 import { Setting } from './entities/setting.entity';
+import { Faq } from './entities/faq.entity';
 
 import { SeedController } from './seed/seed.controller';
 import { TripsController } from './modules/controller/trips/trips.controller';
@@ -53,7 +54,7 @@ import { VietmapService } from './utils/vietmap.service';
       password: process.env.DB_PASSWORD!,
       database: process.env.DB_NAME || 'taxi_app_db',
 
-      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Notification, Contract, WalletTransaction, Setting, SupportTicket],
+      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Notification, Contract, WalletTransaction, Setting, SupportTicket, Faq],
       synchronize: true,
       legacySpatialSupport: false,
     }),

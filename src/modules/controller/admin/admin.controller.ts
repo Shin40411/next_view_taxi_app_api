@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Query, Param, UseGuards, UseInterceptors, UploadedFiles, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Query, Param, UseGuards, UseInterceptors, UploadedFiles, Request } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -142,6 +142,25 @@ export class AdminController {
         if (files?.avatar?.[0]) body.avatar = files.avatar[0].path;
 
         return this.adminService.updateUser(id, body);
+    }
+
+    @Delete('users/:id')
+    async deleteUser(@Param('id') id: string) {
+        return this.adminService.deleteUser(id);
+    }
+
+    @Get('users/deleted/list')
+    async getDeletedUsers(
+        @Query('page') page: number,
+        @Query('limit') limit: number,
+        @Query('search') search?: string,
+    ) {
+        return this.adminService.getDeletedUsers(Number(page) || 1, Number(limit) || 10, search);
+    }
+
+    @Post('users/:id/restore')
+    async restoreUser(@Param('id') id: string) {
+        return this.adminService.restoreUser(id);
     }
 
     @Get('stats/partners')

@@ -8,7 +8,7 @@ import { Trip } from 'src/entities/trip.entity';
 import { User } from 'src/entities/user.entity';
 import { BankAccount } from 'src/entities/bank-account.entity';
 import { UserRole } from 'src/utils/user-role.enum';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { TripStatus } from 'src/utils/trips-status-enum';
 
 @Injectable()
@@ -23,9 +23,10 @@ export class AdminService {
 
     async getUsers(role: UserRole | undefined, page: number = 1, limit: number = 10, search?: string, province?: string) {
         const query = this.userRepo.createQueryBuilder('user');
+        query.where('user.isDelete = :isDelete', { isDelete: false });
 
         if (role) {
-            query.where('user.role = :role', { role });
+            query.andWhere('user.role = :role', { role });
         }
 
         // Include relations based on roles
@@ -66,7 +67,7 @@ export class AdminService {
 
     async getUserById(id: string) {
         const user = await this.userRepo.findOne({
-            where: { id },
+            where: { id, isDelete: false },
             relations: ['partnerProfile', 'servicePoints', 'bankAccount']
         });
 
@@ -81,7 +82,13 @@ export class AdminService {
             throw new ForbiddenException('Cannot create ADMIN user via this API');
         }
 
-        const existingUser = await this.userRepo.findOne({ where: { username: dto.username } });
+        const existingUser = await this.userRepo.findOne({
+            where: [
+                { username: dto.username, isDelete: false },
+                { email: dto.email, isDelete: false },
+                { phone_number: dto.phone_number, isDelete: false }
+            ]
+        });
         if (existingUser) {
             throw new BadRequestException('Thông tin tài khoản đã tồn tại');
         }
@@ -152,19 +159,34 @@ export class AdminService {
 
     async updateUser(id: string, dto: UpdateUserDto) {
         const user = await this.userRepo.findOne({
-            where: { id },
+            where: { id, isDelete: false },
             relations: ['partnerProfile', 'servicePoints', 'bankAccount']
         });
 
         if (!user) {
-            throw new NotFoundException('User not found');
+            throw new NotFoundException('Không tìm thấy tài khoản');
         }
 
-        // Update common fields
+        // Check for duplicates
+        const duplicateConditions: any[] = [];
+        if (dto.username && dto.username !== user.username) duplicateConditions.push({ username: dto.username, id: Not(id), isDelete: false });
+        if (dto.email && dto.email !== user.email) duplicateConditions.push({ email: dto.email, id: Not(id), isDelete: false });
+        if (dto.phone_number && dto.phone_number !== user.phone_number) duplicateConditions.push({ phone_number: dto.phone_number, id: Not(id), isDelete: false });
+
+        if (duplicateConditions.length > 0) {
+            const duplicateUser = await this.userRepo.findOne({
+                where: duplicateConditions
+            });
+
+            if (duplicateUser) {
+                if (dto.username && duplicateUser.username === dto.username) throw new BadRequestException('Tên đăng nhập đã tồn tại');
+                if (dto.email && duplicateUser.email === dto.email) throw new BadRequestException('Email đã tồn tại');
+                if (dto.phone_number && duplicateUser.phone_number === dto.phone_number) throw new BadRequestException('Số điện thoại đã tồn tại');
+            }
+        }
+
         if (dto.username) {
             user.username = dto.username;
-            // Also update phone_number if username looks like a phone and no explicit phone update provided?
-            // Better stick to explicit updates for now to avoid side effects.
         }
         if (dto.phone_number) user.phone_number = dto.phone_number;
         if (dto.email) user.email = dto.email;
@@ -227,6 +249,70 @@ export class AdminService {
         }
 
         return { message: 'Cập nhật thông tin thành công' };
+    }
+
+    async deleteUser(id: string) {
+        const user = await this.userRepo.findOne({
+            where: { id, isDelete: false },
+            relations: ['partnerProfile', 'servicePoints', 'bankAccount']
+        });
+
+        if (!user) {
+            throw new NotFoundException('Không tìm thấy tài khoản');
+        }
+
+        user.isDelete = true;
+        // Optionally anonymize data or handle relations here if rigorous GDPR compliance is needed.
+        // For now, soft delete is enough as per request.
+
+        await this.userRepo.save(user);
+
+        return { message: 'Xóa tài khoản thành công', userId: id };
+    }
+
+    async getDeletedUsers(page: number = 1, limit: number = 10, search?: string) {
+        const query = this.userRepo.createQueryBuilder('user');
+        query.where('user.isDelete = :isDelete', { isDelete: true });
+
+
+
+
+        if (search) {
+            query.andWhere('(user.full_name LIKE :search OR user.username LIKE :search)', { search: `%${search}%` });
+        }
+
+        query.skip((page - 1) * limit);
+        query.take(limit);
+
+        const [users, total] = await query.getManyAndCount();
+
+        const safeUsers = users.map(u => {
+            const { password_hash, ...rest } = u;
+            return rest;
+        });
+
+        return {
+            data: safeUsers,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
+    }
+
+    async restoreUser(id: string) {
+        const user = await this.userRepo.findOne({
+            where: { id, isDelete: true }
+        });
+
+        if (!user) {
+            throw new NotFoundException('Không tìm thấy tài khoản đã xóa');
+        }
+
+        user.isDelete = false;
+        await this.userRepo.save(user);
+
+        return { message: 'Khôi phục tài khoản thành công', userId: id };
     }
 
     async getPartnerStats(range: string, page: number = 1, limit: number = 10) {
@@ -394,7 +480,7 @@ export class AdminService {
 
 
     async changeUserPassword(userId: string, newPassword: string) {
-        const user = await this.userRepo.findOne({ where: { id: userId } });
+        const user = await this.userRepo.findOne({ where: { id: userId, isDelete: false } });
         if (!user) {
             throw new NotFoundException('User not found');
         }

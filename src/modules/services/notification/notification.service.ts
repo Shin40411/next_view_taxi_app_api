@@ -32,11 +32,15 @@ export class NotificationService {
         await this.notificationRepository.save(notification);
     }
 
-    async findAllByUserId(userId: string): Promise<Notification[]> {
-        return this.notificationRepository.find({
+    async findAllByUserId(userId: string, page: number = 1, limit: number = 10): Promise<{ data: Notification[], total: number }> {
+        const [data, total] = await this.notificationRepository.findAndCount({
             where: { userId },
             order: { created_at: 'DESC' },
+            skip: (page - 1) * limit,
+            take: limit,
         });
+
+        return { data, total };
     }
 
     async findUnreadByUserId(userId: string): Promise<Notification[]> {
