@@ -112,8 +112,14 @@ export class AuthController {
     @Get('google/callback')
     @UseGuards(PassportAuthGuard('google'))
     async googleAuthRedirect(@Request() req, @Res() res: Response) {
-        const data = await this.authService.handleGoogleLogin(req.user);
-        const frontendUrl = process.env.FRONTEND_URL || 'https://goxu.vn';
-        return res.redirect(`${frontendUrl}/auth/jwt/login?accessToken=${data.access_token}&userId=${data.user_id}&role=${data.role}&username=${data.username}&fullName=${encodeURIComponent(data.full_name)}`);
+        try {
+            const data = await this.authService.handleGoogleLogin(req.user);
+            const frontendUrl = process.env.FRONTEND_URL || 'https://goxu.vn';
+            return res.redirect(`${frontendUrl}/auth/jwt/login?accessToken=${data.access_token}&userId=${data.user_id}&role=${data.role}&username=${data.username}&fullName=${encodeURIComponent(data.full_name)}`);
+        } catch (error: any) {
+            const frontendUrl = process.env.FRONTEND_URL || 'https://goxu.vn';
+            const message = error.message || 'Đăng nhập thất bại';
+            return res.redirect(`${frontendUrl}/auth/jwt/login?error=${encodeURIComponent(message)}`);
+        }
     }
 }

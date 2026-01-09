@@ -166,12 +166,12 @@ export class AuthService {
     async handleGoogleLogin(googleUser: any) {
         const { id, email, firstName, lastName, picture, phone, role } = googleUser;
 
-        // 1. Unified Lookup
+        // 1. Unified Lookup (Allow finding deleted users to reactivate them)
         let user = await this.userRepo.findOne({
             where: [
-                { google_id: id, isDelete: false },
-                ...(email ? [{ email: email, isDelete: false }] : []),
-                ...(phone ? [{ phone_number: phone, isDelete: false }] : [])
+                { google_id: id },
+                ...(email ? [{ email: email }] : []),
+                ...(phone ? [{ phone_number: phone }] : [])
             ],
             relations: ['partnerProfile']
         });
@@ -179,6 +179,11 @@ export class AuthService {
         // 2. If User Exists -> Update & Login
         if (user) {
             let hasUpdates = false;
+
+            // Check if user is deleted validation
+            if (user.isDelete) {
+                throw new UnauthorizedException('Tài khoản đã bị khoá');
+            }
 
             if (!user.google_id) {
                 user.google_id = id;
