@@ -16,7 +16,7 @@ export class CreateDepositDto {
 
 export class CreateWithdrawDto {
     @IsNumber()
-    @Min(50000)
+    @Min(10)
     amount: number;
 
     @IsOptional()
@@ -41,7 +41,7 @@ export class CreateTransferDto {
     receiverId: string;
 
     @IsNumber()
-    @Min(10000)
+    @Min(10)
     //@Max(1000000000)
     amount: number;
 
