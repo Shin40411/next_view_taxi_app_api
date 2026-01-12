@@ -23,6 +23,15 @@ export class PartnerProfile {
     id_card_back: string | null;
 
     @Column({ type: 'varchar', nullable: true })
+    id_card_num: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    date_of_birth: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    sex: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
     driver_license_front: string | null;
 
     @Column({ type: 'varchar', nullable: true })

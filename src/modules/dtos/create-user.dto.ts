@@ -57,6 +57,20 @@ export class CreateUserDto {
     @IsOptional()
     @IsString()
     @MaxLength(50)
+    id_card_num?: string;
+
+    @IsOptional()
+    @IsString()
+    date_of_birth?: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(20)
+    sex?: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(50)
     tax_id?: string;
 
     @IsOptional()

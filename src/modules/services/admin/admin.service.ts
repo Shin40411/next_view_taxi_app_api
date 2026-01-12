@@ -123,6 +123,9 @@ export class AdminService {
                 brand: dto.brand || null,
                 id_card_front: dto.id_card_front || null,
                 id_card_back: dto.id_card_back || null,
+                id_card_num: dto.id_card_num || null,
+                date_of_birth: dto.date_of_birth || null,
+                sex: dto.sex || null,
                 driver_license_front: dto.driver_license_front || '',
                 driver_license_back: dto.driver_license_back || '',
                 is_online: false,
@@ -218,6 +221,9 @@ export class AdminService {
             if (dto.driver_license_back) profileUpdates.driver_license_back = dto.driver_license_back;
             if (dto.id_card_front) profileUpdates.id_card_front = dto.id_card_front;
             if (dto.id_card_back) profileUpdates.id_card_back = dto.id_card_back;
+            if (dto.id_card_num) profileUpdates.id_card_num = dto.id_card_num;
+            if (dto.date_of_birth) profileUpdates.date_of_birth = dto.date_of_birth;
+            if (dto.sex) profileUpdates.sex = dto.sex;
 
             if (Object.keys(profileUpdates).length > 0) {
                 await this.profileRepo.update(profile.id, profileUpdates);
