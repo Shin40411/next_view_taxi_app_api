@@ -10,9 +10,9 @@ import { ZaloService } from '../services/zalo/zalo.service';
 import { AuthController } from '../controller/auth/auth.controller';
 import { RedisModule } from '../redis/redis.module';
 import { GoogleStrategy } from './strategies/google.strategy';
-import { SettingsService } from '../settings/settings.service';
 import { SettingsModule } from '../settings/settings.module';
 import { MailService } from '../services/mail/mail.service';
+import { SettingsService } from '../services/settings/settings.service';
 
 @Module({
     imports: [

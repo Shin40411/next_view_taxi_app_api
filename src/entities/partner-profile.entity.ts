@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 import { User } from './user.entity';
+import { PartnerStatus } from '../utils/partner-status.enum';
 
 @Entity('partner_profiles')
 export class PartnerProfile {
@@ -50,4 +51,14 @@ export class PartnerProfile {
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
     wallet_balance: number;
+
+    @Column({
+        type: 'enum',
+        enum: PartnerStatus,
+        default: PartnerStatus.PENDING
+    })
+    status: PartnerStatus;
+
+    @Column({ nullable: true, type: 'text' })
+    reject_reason: string | null;
 }

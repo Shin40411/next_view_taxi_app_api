@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Query, Param, UseGuards, UseI
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { CreateUserDto, UpdateUserDto, AdminChangePasswordDto } from 'src/modules/dtos/register-user.dto';
+import { CreateUserDto, UpdateUserDto, AdminChangePasswordDto, UpdatePartnerStatusDto } from 'src/modules/dtos/register-user.dto';
 import { UpdateTransactionStatusDto } from 'src/modules/dtos/wallet.dto';
 import { UserRole } from 'src/utils/user-role.enum';
 import { AuthGuard } from 'src/modules/auth/auth.guard';
@@ -72,6 +72,12 @@ export class AdminController {
                 cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
             },
         }),
+        fileFilter: (req, file, cb) => {
+            if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                return cb(new Error('Only image files are allowed!'), false);
+            }
+            cb(null, true);
+        },
     }))
     async createUser(
         @Body() body: CreateUserDto,
@@ -121,6 +127,12 @@ export class AdminController {
                 cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
             },
         }),
+        fileFilter: (req, file, cb) => {
+            if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                return cb(new Error('Only image files are allowed!'), false);
+            }
+            cb(null, true);
+        },
     }))
     async updateUser(
         @Param('id') id: string,
@@ -184,6 +196,14 @@ export class AdminController {
     @Post('users/change-password')
     async changePassword(@Body() body: AdminChangePasswordDto) {
         return this.adminService.changeUserPassword(body.userId, body.newPassword);
+    }
+
+    @Put('users/:id/partner-status')
+    async updatePartnerStatus(
+        @Param('id') id: string,
+        @Body() body: UpdatePartnerStatusDto
+    ) {
+        return this.adminService.updatePartnerStatus(id, body.status, body.reason);
     }
 
     @Get('users/:id/trips')

@@ -5,9 +5,10 @@ export * from './update-user.dto';
 export * from './admin-change-password.dto';
 
 export * from './change-password.dto';
+export * from './update-partner-status.dto';
 import { Sanitize } from 'src/utils/transformers/sanitize.transformer';
 
-import { IsNotEmpty, IsOptional, MaxLength, IsString, IsNumber, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsOptional, MaxLength, IsString, IsNumber, IsEnum, IsEmail } from 'class-validator';
 
 export class RegisterDto {
 
@@ -31,11 +32,13 @@ export class RegisterDto {
     full_name: string;
 
 
-    @IsOptional()
+
+    @IsNotEmpty()
     @IsString()
+    @IsEmail()
     @MaxLength(255)
     @Sanitize()
-    email?: string;
+    email: string;
 
 
     @IsOptional()
@@ -97,4 +100,10 @@ export class RegisterDto {
 
     @IsOptional()
     discount?: number;
+
+    @IsNotEmpty()
+    @IsString()
+    @MaxLength(6)
+    @Sanitize()
+    otp: string;
 }

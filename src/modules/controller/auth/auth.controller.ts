@@ -61,9 +61,19 @@ export class AuthController {
         return this.authService.register(body);
     }
 
+    @Post('request-register-otp')
+    async requestRegisterOtp(@Body() body: { username: string; email: string; fullName: string }) {
+        return this.authService.requestRegisterOtp(body);
+    }
+
+    @Post('request-login-otp')
+    async requestLoginOtp(@Body() body: { username: string; password: string }) {
+        return this.authService.requestLoginOtp(body);
+    }
+
     @Post('login')
-    async login(@Body() body: LoginDto) {
-        return this.authService.login(body.username, body.password);
+    async login(@Body() body: LoginDto & { otp?: string }) {
+        return this.authService.login(body.username, body.password, body.otp);
     }
 
     @Post('logout')

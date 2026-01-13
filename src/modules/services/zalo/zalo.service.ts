@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import Redis from 'ioredis';
-import { SettingsService } from '../../settings/settings.service';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class ZaloService {

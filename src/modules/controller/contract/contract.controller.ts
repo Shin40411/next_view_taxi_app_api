@@ -44,5 +44,13 @@ export class ContractController {
         return this.contractService.terminate(id);
     }
 
+    @Put(':id/approve')
+    async approve(@Request() req, @Param('id') id: string) {
+        if (req.user.role !== UserRole.ADMIN) {
+            throw new ForbiddenException('Only admin can approve contracts');
+        }
+        return this.contractService.approve(id);
+    }
+
 
 }

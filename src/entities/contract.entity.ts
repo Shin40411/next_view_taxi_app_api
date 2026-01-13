@@ -25,7 +25,7 @@ export class Contract {
     @Column()
     vehicle: string;
 
-    @Column({ type: 'text' }) // Use text for base64 signature as it can be long
+    @Column({ type: 'text' })
     signature: string;
 
     @Column({ name: 'user_id' })
@@ -41,7 +41,7 @@ export class Contract {
     @Column({
         type: 'enum',
         enum: ContractStatus,
-        default: ContractStatus.ACTIVE,
+        default: ContractStatus.INACTIVE,
     })
     status: ContractStatus;
 }

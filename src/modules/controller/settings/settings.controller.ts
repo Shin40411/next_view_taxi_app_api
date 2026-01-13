@@ -1,9 +1,10 @@
 import { Controller, Get, Put, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
-import { SettingsService } from './settings.service';
-import { Setting } from '../../entities/setting.entity';
-import { AuthGuard } from '../auth/auth.guard';
-import { UserRole } from '../../utils/user-role.enum';
-import { UpdateSettingsDto } from '../dtos/update-settings.dto';
+import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { Setting } from 'src/entities/setting.entity';
+import { UpdateSettingsDto } from 'src/modules/dtos/update-settings.dto';
+import { SettingsService } from 'src/modules/services/settings/settings.service';
+import { UserRole } from 'src/utils/user-role.enum';
+
 
 @Controller('settings')
 @UseGuards(AuthGuard)
@@ -15,8 +16,6 @@ export class SettingsController {
         if (req.user.role !== UserRole.ADMIN) throw new ForbiddenException('Admin access required');
         return this.settingsService.getSettings();
     }
-
-
 
     @Put()
     async updateSettings(@Request() req, @Body() data: UpdateSettingsDto): Promise<Setting> {

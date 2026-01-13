@@ -10,6 +10,8 @@ import { BankAccount } from 'src/entities/bank-account.entity';
 import { UserRole } from 'src/utils/user-role.enum';
 import { Repository, Not } from 'typeorm';
 import { TripStatus } from 'src/utils/trips-status-enum';
+import { PartnerStatus } from 'src/utils/partner-status.enum';
+import { SocketGateway } from 'src/modules/socket/socket.gateway';
 
 @Injectable()
 export class AdminService {
@@ -19,6 +21,7 @@ export class AdminService {
         @InjectRepository(Trip) private tripRepo: Repository<Trip>,
         @InjectRepository(PartnerProfile) private profileRepo: Repository<PartnerProfile>,
         @InjectRepository(BankAccount) private bankRepo: Repository<BankAccount>,
+        private socketGateway: SocketGateway,
     ) { }
 
     async getUsers(role: UserRole | undefined, page: number = 1, limit: number = 10, search?: string, province?: string) {
@@ -105,7 +108,7 @@ export class AdminService {
         const newUser = this.userRepo.create({
             username: dto.username,
             email: dto.email,
-            phone_number: dto.phone_number || (dto.username.match(/^\d+$/) ? dto.username : null), // Try to set phone from username if digit-only, or explicit field
+            phone_number: dto.phone_number || (dto.username.match(/^\d+$/) ? dto.username : null),
             password_hash: hashedPassword,
             full_name: dto.full_name,
             role: dto.role,
@@ -154,7 +157,6 @@ export class AdminService {
             await this.serviceRepo.save(servicePoint);
         }
 
-        // Create Bank Account if provided
         if (dto.bank_name || dto.account_number || dto.account_holder_name) {
             const bankAccount = this.bankRepo.create({
                 user: savedUser,
@@ -226,13 +228,13 @@ export class AdminService {
             if (dto.sex) profileUpdates.sex = dto.sex;
 
             if (Object.keys(profileUpdates).length > 0) {
+                profileUpdates.status = PartnerStatus.PENDING;
                 await this.profileRepo.update(profile.id, profileUpdates);
             }
         }
 
         // Update Service Point (Customer)
         if (user.role === UserRole.CUSTOMER && user.servicePoints && user.servicePoints.length > 0) {
-            // Update the primary service point (first one)
             const servicePoint = user.servicePoints[0];
             if (dto.address) servicePoint.address = dto.address;
             if (dto.province) servicePoint.province = dto.province;
@@ -276,8 +278,6 @@ export class AdminService {
         }
 
         user.isDelete = true;
-        // Optionally anonymize data or handle relations here if rigorous GDPR compliance is needed.
-        // For now, soft delete is enough as per request.
 
         await this.userRepo.save(user);
 
@@ -287,9 +287,6 @@ export class AdminService {
     async getDeletedUsers(page: number = 1, limit: number = 10, search?: string) {
         const query = this.userRepo.createQueryBuilder('user');
         query.where('user.isDelete = :isDelete', { isDelete: true });
-
-
-
 
         if (search) {
             query.andWhere('(user.full_name LIKE :search OR user.username LIKE :search)', { search: `%${search}%` });
@@ -492,7 +489,6 @@ export class AdminService {
         return { data, total };
     }
 
-
     async changeUserPassword(userId: string, newPassword: string) {
         const user = await this.userRepo.findOne({ where: { id: userId, isDelete: false } });
         if (!user) {
@@ -504,6 +500,44 @@ export class AdminService {
         await this.userRepo.save(user);
 
         return { message: 'Password changed successfully' };
+    }
+
+    async updatePartnerStatus(userId: string, status: PartnerStatus, reason?: string) {
+        const user = await this.userRepo.findOne({
+            where: { id: userId },
+            relations: ['partnerProfile']
+        });
+
+        if (!user) {
+            throw new NotFoundException('Không tìm thấy tài khoản');
+        }
+
+        if (!user.partnerProfile) {
+            throw new BadRequestException('Tài khoản không có thông tin');
+        }
+
+        user.partnerProfile.status = status;
+        if (status === PartnerStatus.REJECTED && reason) {
+            user.partnerProfile.reject_reason = reason;
+        } else if (status === PartnerStatus.PENDING || status === PartnerStatus.APPROVED) {
+            user.partnerProfile.reject_reason = null;
+        }
+
+        await this.profileRepo.save(user.partnerProfile);
+
+        if (status === PartnerStatus.APPROVED) {
+            await this.socketGateway.sendToUser(userId, 'profile-status-update', { status: PartnerStatus.APPROVED }, {
+                title: 'Hồ sơ đã được duyệt',
+                body: 'Hồ sơ của bạn đã được duyệt thành công.'
+            });
+        } else if (status === PartnerStatus.REJECTED) {
+            await this.socketGateway.sendToUser(userId, 'profile-status-update', { status: PartnerStatus.REJECTED, reason }, {
+                title: 'Hồ sơ bị từ chối',
+                body: `Hồ sơ của bạn đã bị từ chối. Lý do: ${reason || 'Không có lý do cụ thể'}`
+            });
+        }
+
+        return { message: 'Status updated successfully' };
     }
 
     async getUserTrips(userId: string, page: number = 1, limit: number = 10) {
