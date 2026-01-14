@@ -5,7 +5,7 @@ import { extname } from 'path';
 import { CreateUserDto, UpdateUserDto, AdminChangePasswordDto, UpdatePartnerStatusDto } from 'src/modules/dtos/register-user.dto';
 import { UpdateTransactionStatusDto } from 'src/modules/dtos/wallet.dto';
 import { UserRole } from 'src/utils/user-role.enum';
-import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { AdminService } from 'src/modules/services/admin/admin.service';
 import { WalletService } from 'src/modules/services/wallet/wallet.service';
 import { TransactionStatus } from 'src/utils/wallet-transaction-enum';

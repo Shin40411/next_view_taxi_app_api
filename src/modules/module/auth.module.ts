@@ -1,16 +1,16 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { AuthGuard } from './auth.guard';
+import { AuthGuard } from '../auth/guards/auth.guard';
 import { User } from 'src/entities/user.entity';
 import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { ServicePoint } from 'src/entities/service-point.entity';
 import { AuthService } from '../services/auth/auth.service';
 import { ZaloService } from '../services/zalo/zalo.service';
 import { AuthController } from '../controller/auth/auth.controller';
-import { RedisModule } from '../redis/redis.module';
-import { GoogleStrategy } from './strategies/google.strategy';
-import { SettingsModule } from '../settings/settings.module';
+import { RedisModule } from './redis.module';
+import { GoogleStrategy } from '../auth/strategies/google.strategy';
+import { SettingsModule } from './settings.module';
 import { MailService } from '../services/mail/mail.service';
 import { SettingsService } from '../services/settings/settings.service';
 

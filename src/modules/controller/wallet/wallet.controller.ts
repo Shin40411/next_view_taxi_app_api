@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Query, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { WalletService } from 'src/modules/services/wallet/wallet.service';
-import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { UserRole } from 'src/utils/user-role.enum';
 
 @Controller('wallets')
@@ -21,6 +21,11 @@ export class WalletController {
             throw new ForbiddenException('Bạn không có quyền để sử dụng api này');
         }
         return this.walletService.findAll(Number(page) || 1, Number(limit) || 10, search, fromDate, toDate);
+    }
+
+    @Get('banks')
+    async getBanks() {
+        return this.walletService.getBanks();
     }
 
     @Get('customer/transactions')

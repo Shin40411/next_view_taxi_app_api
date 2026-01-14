@@ -4,10 +4,10 @@ import { Repository } from 'typeorm';
 import { Raw } from 'typeorm';
 
 import * as bcrypt from 'bcrypt';
-import { User } from '../entities/user.entity';
-import { PartnerProfile } from '../entities/partner-profile.entity';
-import { ServicePoint } from '../entities/service-point.entity';
-import { Trip } from '../entities/trip.entity';
+import { User } from '../../../entities/user.entity';
+import { PartnerProfile } from '../../../entities/partner-profile.entity';
+import { ServicePoint } from '../../../entities/service-point.entity';
+import { Trip } from '../../../entities/trip.entity';
 import { UserRole } from 'src/utils/user-role.enum';
 import { TripStatus } from 'src/utils/trips-status-enum';
 

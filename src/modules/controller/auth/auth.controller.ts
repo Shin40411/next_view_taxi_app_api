@@ -6,9 +6,9 @@ import { extname } from 'path';
 import { RegisterDto, ChangePasswordDto } from 'src/modules/dtos/register-user.dto';
 import { LoginDto } from 'src/modules/dtos/login.dto';
 import { AuthService } from 'src/modules/services/auth/auth.service';
-import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
-import { GoogleAuthGuard } from 'src/modules/auth/google-auth.guard';
+import { GoogleAuthGuard } from 'src/modules/auth/guards/google-auth.guard';
 import { ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from 'src/modules/dtos/forgot-password.dto';
 
 @Controller('auth')

@@ -2,7 +2,7 @@ import { Controller, Get, Query, Param, Request, Post, Body, UseGuards, UseInter
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { CustomerService } from 'src/modules/services/customers/customer.service';
 import { WalletService } from 'src/modules/services/wallet/wallet.service';
 import { CreateDepositDto, CreateTransferDto } from 'src/modules/dtos/wallet.dto';

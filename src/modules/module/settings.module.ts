@@ -1,7 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Setting } from '../../entities/setting.entity';
-import { AuthModule } from '../auth/auth.module';
+import { AuthModule } from './auth.module';
 import { SettingsController } from '../controller/settings/settings.controller';
 import { SettingsService } from '../services/settings/settings.service';
 

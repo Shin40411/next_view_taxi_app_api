@@ -9,8 +9,9 @@ import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { TransactionType, TransactionStatus } from 'src/utils/wallet-transaction-enum';
 import { TransactionType as LegacyTransactionType } from 'src/utils/point-transaction-enum';
 import { UserRole } from 'src/utils/user-role.enum';
-import { CreateDepositDto, CreateWithdrawDto, CreateTransferDto } from 'src/modules/dtos/wallet.dto';
+import { CreateDepositDto, CreateWithdrawDto, CreateTransferDto, IBankListResponse } from 'src/modules/dtos/wallet.dto';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
+import { VietQR } from 'vietqr';
 
 @Injectable()
 export class WalletService {
@@ -435,6 +436,21 @@ export class WalletService {
             throw err;
         } finally {
             await queryRunner.release();
+        }
+    }
+
+    async getBanks(): Promise<IBankListResponse> {
+        try {
+            const vietQR = new VietQR({
+                clientID: process.env.VIETQR_CLIENT_ID || '',
+                apiKey: process.env.VIETQR_API_KEY || '',
+            });
+
+            const banks = await vietQR.getBanks();
+            return banks as IBankListResponse;
+        } catch (error) {
+            console.error('VietQR getBanks error:', error);
+            throw new BadRequestException('Không thể lấy danh sách ngân hàng');
         }
     }
 }

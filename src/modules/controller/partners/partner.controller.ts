@@ -4,7 +4,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { PartnerService } from 'src/modules/services/partners/partner.service';
 import { WalletService } from 'src/modules/services/wallet/wallet.service';
-import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { CreateWithdrawDto, CreateTransferDto, CreateDepositDto } from 'src/modules/dtos/wallet.dto';
 
 @Controller('partner')

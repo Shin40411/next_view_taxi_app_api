@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards, Delete } from '@nestjs/common';
 import { SupportService } from 'src/modules/services/support/support.service';
-import { AuthGuard } from 'src/modules/auth/auth.guard';
-import { RolesGuard } from 'src/modules/guards/roles.guard';
+import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
+import { RolesGuard } from 'src/modules/auth/guards/roles.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { UserRole } from 'src/utils/user-role.enum';
 import { CreateTicketDto, ReplyTicketDto } from 'src/modules/dtos/support.dto';

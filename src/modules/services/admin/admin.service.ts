@@ -214,7 +214,7 @@ export class AdminService {
 
         // Update Partner/Introducer Profile
         if ((user.role === UserRole.PARTNER || user.role === UserRole.INTRODUCER) && user.partnerProfile) {
-            const profile = user.partnerProfile;
+            // const profile = user.partnerProfile;
             const profileUpdates: any = {};
 
             if (dto.vehicle_plate) profileUpdates.vehicle_plate = dto.vehicle_plate;
@@ -227,10 +227,12 @@ export class AdminService {
             if (dto.date_of_birth) profileUpdates.date_of_birth = dto.date_of_birth;
             if (dto.sex) profileUpdates.sex = dto.sex;
 
-            if (Object.keys(profileUpdates).length > 0) {
-                profileUpdates.status = PartnerStatus.PENDING;
-                await this.profileRepo.update(profile.id, profileUpdates);
-            }
+            // if (Object.keys(profileUpdates).length > 0) {
+            //     if (profileUpdates.status !== PartnerStatus.PENDING) {
+            //         profileUpdates.status = PartnerStatus.PENDING;
+            //     }
+            //     await this.profileRepo.update(profile.id, profileUpdates);
+            // }
         }
 
         // Update Service Point (Customer)

@@ -2,6 +2,23 @@ import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, 
 import { Type } from 'class-transformer';
 import { TransactionStatus } from 'src/utils/wallet-transaction-enum';
 
+export interface IBank {
+    id: number;
+    name: string;
+    code: string;
+    bin: string;
+    shortName: string;
+    logo: string;
+    transferSupported: number;
+    lookupSupported: number;
+}
+
+export interface IBankListResponse {
+    code: string;
+    desc: string;
+    data: IBank[];
+}
+
 export class CreateDepositDto {
     @IsNumber()
     @Min(10)

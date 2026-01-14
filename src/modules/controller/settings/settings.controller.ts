@@ -1,5 +1,5 @@
 import { Controller, Get, Put, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
-import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { Setting } from 'src/entities/setting.entity';
 import { UpdateSettingsDto } from 'src/modules/dtos/update-settings.dto';
 import { SettingsService } from 'src/modules/services/settings/settings.service';

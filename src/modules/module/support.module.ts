@@ -5,8 +5,8 @@ import { User } from 'src/entities/user.entity';
 import { Faq } from 'src/entities/faq.entity';
 import { SupportController } from 'src/modules/controller/support/support.controller';
 import { SupportService } from 'src/modules/services/support/support.service';
-import { AuthModule } from '../auth/auth.module';
-import { NotificationModule } from 'src/modules/notification/notification.module';
+import { AuthModule } from './auth.module';
+import { NotificationModule } from 'src/modules/module/notification.module';
 
 
 @Module({

@@ -2,7 +2,7 @@
 import { Controller, Get, Post, Body, UseGuards, Request, ForbiddenException, Query, Put, Param } from '@nestjs/common';
 import { ContractService } from 'src/modules/services/contract/contract.service';
 import { CreateContractDto } from 'src/modules/dtos/create-contract.dto';
-import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { UserRole } from 'src/utils/user-role.enum';
 
 @Controller('contracts')
