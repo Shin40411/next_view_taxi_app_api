@@ -164,16 +164,14 @@ export class AuthService {
                 if (!isTrusted) {
                     throw new BadRequestException('Vui lòng nhập mã OTP để tiếp tục');
                 }
+            } else {
+                const storedOtp = await this.redis.get(`login_otp:${user.username}`);
+                if (!storedOtp || storedOtp !== otp) {
+                    throw new BadRequestException('Mã OTP không chính xác hoặc đã hết hạn');
+                }
+                await this.redis.del(`login_otp:${user.username}`);
+                await this.redis.set(`trusted_device:${user.username}`, 'true', 'EX', 86400);
             }
-        }
-
-        if (otp) {
-            const storedOtp = await this.redis.get(`login_otp:${user.username}`);
-            if (!storedOtp || storedOtp !== otp) {
-                throw new BadRequestException('Mã OTP không chính xác hoặc đã hết hạn');
-            }
-            await this.redis.del(`login_otp:${user.username}`);
-            await this.redis.set(`trusted_device:${user.username}`, 'true', 'EX', 86400);
         }
 
         const sessionId = randomUUID();
