@@ -6,7 +6,9 @@ import { CreateUserDto, UpdateUserDto, AdminChangePasswordDto, UpdatePartnerStat
 import { UpdateTransactionStatusDto } from 'src/modules/dtos/wallet.dto';
 import { UserRole } from 'src/utils/user-role.enum';
 import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
+import { ApiKeyGuard } from 'src/modules/auth/guards/api-key.guard';
 import { AdminService } from 'src/modules/services/admin/admin.service';
+import { CreateAdminDto, UpdateAdminDto } from 'src/modules/dtos/admin-user.dto';
 import { WalletService } from 'src/modules/services/wallet/wallet.service';
 import { TransactionStatus } from 'src/utils/wallet-transaction-enum';
 
@@ -21,6 +23,8 @@ export class AdminController {
     async updateTransactionStatus(@Request() req, @Body() body: UpdateTransactionStatusDto) {
         return this.walletService.updateTransactionStatus(body.transactionId, body.accept, req.user.sub, body.reason);
     }
+
+
 
     @Get('users')
     async getUsers(

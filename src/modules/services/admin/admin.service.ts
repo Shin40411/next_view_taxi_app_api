@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto, UpdateUserDto } from 'src/modules/dtos/register-user.dto';
+import { CreateAdminDto, UpdateAdminDto } from 'src/modules/dtos/admin-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { ServicePoint } from 'src/entities/service-point.entity';
@@ -564,5 +565,56 @@ export class AdminService {
             limit,
             totalPages: Math.ceil(total / limit),
         };
+    }
+
+
+    async createAdminUser(dto: CreateAdminDto) {
+        const existingUser = await this.userRepo.findOne({
+            where: [
+                { username: dto.username },
+                ...(dto.email ? [{ email: dto.email }] : [])
+            ]
+        });
+
+        if (existingUser) {
+            throw new BadRequestException('Username or email already exists');
+        }
+
+        const hashedPassword = await bcrypt.hash(dto.password, 10);
+        const newUser = this.userRepo.create({
+            username: dto.username,
+            password_hash: hashedPassword,
+            full_name: dto.fullName,
+            role: UserRole.ADMIN,
+            email: dto.email,
+            phone_number: dto.phoneNumber,
+        });
+
+        const saved = await this.userRepo.save(newUser);
+        const { password_hash, ...rest } = saved;
+        return rest;
+    }
+
+    async updateAdminUser(username: string, dto: UpdateAdminDto) {
+        const user = await this.userRepo.findOne({ where: { username } });
+
+        if (!user) {
+            throw new NotFoundException('Admin user not found');
+        }
+
+        if (user.role !== UserRole.ADMIN) {
+            throw new ForbiddenException('User is not an admin');
+        }
+
+        if (dto.password) {
+            user.password_hash = await bcrypt.hash(dto.password, 10);
+        }
+        if (dto.fullName) user.full_name = dto.fullName;
+        if (dto.email) user.email = dto.email;
+        if (dto.phoneNumber) user.phone_number = dto.phoneNumber;
+
+        const saved = await this.userRepo.save(user);
+        const { password_hash, ...rest } = saved;
+        return rest;
     }
 }

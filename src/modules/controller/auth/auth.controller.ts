@@ -79,7 +79,7 @@ export class AuthController {
     @Post('logout')
     @UseGuards(AuthGuard)
     async logout(@Request() req) {
-        return this.authService.logout(req.user.sub);
+        return this.authService.logout(req.user.sub, req.user.session_id);
     }
 
     @Post('forgot-password')

@@ -19,6 +19,7 @@ import { Faq } from './entities/faq.entity';
 import { TripsController } from './modules/controller/trips/trips.controller';
 import { TripsService } from './modules/services/trips/trips.service';
 import { AdminController } from './modules/controller/admin/admin.controller';
+import { SystemAdminController } from './modules/controller/admin/system-admin.controller';
 import { AdminService } from './modules/services/admin/admin.service';
 import { PartnerController } from './modules/controller/partners/partner.controller';
 import { PartnerService } from './modules/services/partners/partner.service';
@@ -76,7 +77,7 @@ import { TasksModule } from './modules/module/tasks.module';
     ScheduleModule.forRoot(),
     TasksModule,
   ],
-  controllers: [SeedController, TripsController, AdminController, PartnerController, CustomerController, ContractController, WalletController],
+  controllers: [SeedController, TripsController, AdminController, SystemAdminController, PartnerController, CustomerController, ContractController, WalletController],
   providers: [
     TripsService,
     AdminService,

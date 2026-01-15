@@ -4,6 +4,7 @@ import Redis from 'ioredis';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Raw, DataSource } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { ServicePoint } from 'src/entities/service-point.entity';
 import { ConfigService } from '@nestjs/config';
 import { UserRole } from 'src/utils/user-role.enum';
@@ -144,7 +145,8 @@ export class AuthService {
         const user = await this.userRepo.findOne({
             where: [
                 { username: username },
-                { email: username }
+                { email: username },
+                { phone_number: username }
             ]
         });
 
@@ -174,15 +176,17 @@ export class AuthService {
             await this.redis.set(`trusted_device:${user.username}`, 'true', 'EX', 86400);
         }
 
+        const sessionId = randomUUID();
         const payload = {
             sub: user.id,
             role: user.role,
+            session_id: sessionId,
             exp: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
         };
 
         const token = await V3.encrypt(payload, this.secretKey);
 
-        await this.redis.set(`auth:${user.id}`, token, 'EX', 7200);
+        await this.redis.set(`auth:${user.id}:${sessionId}`, token, 'EX', 7200);
 
         return {
             access_token: token,
@@ -196,7 +200,8 @@ export class AuthService {
         const user = await this.userRepo.findOne({
             where: [
                 { username: username },
-                { email: username }
+                { email: username },
+                { phone_number: username }
             ]
         });
 
@@ -365,14 +370,16 @@ export class AuthService {
         }
 
         // 4. Generate Token
+        const sessionId = randomUUID();
         const payload = {
             sub: user.id,
             role: user.role,
+            session_id: sessionId,
             exp: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
         };
 
         const token = await V3.encrypt(payload, this.secretKey);
-        await this.redis.set(`auth:${user.id}`, token, 'EX', 7200);
+        await this.redis.set(`auth:${user.id}:${sessionId}`, token, 'EX', 7200);
 
         let isNew = false;
         if (user.role === UserRole.CUSTOMER) {
@@ -392,8 +399,14 @@ export class AuthService {
         };
     }
 
-    async logout(userId: string) {
-        await this.redis.del(`auth:${userId}`);
+    async logout(userId: string, sessionId?: string) {
+        if (sessionId) {
+            await this.redis.del(`auth:${userId}:${sessionId}`);
+        } else {
+            // Fallback for old tokens or mass logout (optional, but safer to do nothing or handle specific logic)
+            // For now, let's try to delete the old key format just in case
+            await this.redis.del(`auth:${userId}`);
+        }
         return { message: 'Đăng xuất thành công' };
     }
 
@@ -401,7 +414,15 @@ export class AuthService {
         try {
             const payload = await V3.decrypt(token, this.secretKey);
             const userId = payload.sub;
-            const storedToken = await this.redis.get(`auth:${userId}`);
+            const sessionId = payload.session_id;
+
+            if (!sessionId) {
+                // Backward compatibility for tokens during migration (optional)
+                // Or just return null to force re-login
+                return null;
+            }
+
+            const storedToken = await this.redis.get(`auth:${userId}:${sessionId}`);
 
             if (!storedToken || storedToken !== token) return null;
 
