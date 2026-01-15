@@ -207,6 +207,8 @@ export class AuthService {
             throw new UnauthorizedException('Không tìm thấy tài khoản hoặc tài khoản đã bị khoá');
         }
 
+        console.log('Login attempt:', username, user.id, user.role);
+
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) {
             throw new UnauthorizedException('Tên tài khoản hoặc mật khẩu không chính xác');
