@@ -25,6 +25,7 @@ export class CustomerController {
                 cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
             },
         }),
+        limits: { fileSize: 5 * 1024 * 1024 },
     }))
     async requestDeposit(@Request() req, @Body() body: CreateDepositDto, @UploadedFile() file: Express.Multer.File) {
         if (file) {

@@ -36,6 +36,7 @@ export class AuthController {
                 cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
             },
         }),
+        limits: { fileSize: 5 * 1024 * 1024 },
     }))
     async register(
         @Body() body: RegisterDto,
