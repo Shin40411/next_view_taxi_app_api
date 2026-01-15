@@ -67,7 +67,7 @@ import { TasksModule } from './modules/module/tasks.module';
       legacySpatialSupport: false,
     }),
 
-    TypeOrmModule.forFeature([User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Contract, WalletTransaction]),
+    TypeOrmModule.forFeature([User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Contract, WalletTransaction, Notification, SupportTicket]),
     AuthModule,
     SocketModule,
     NotificationModule,

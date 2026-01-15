@@ -24,8 +24,6 @@ export class AdminController {
         return this.walletService.updateTransactionStatus(body.transactionId, body.accept, req.user.sub, body.reason);
     }
 
-
-
     @Get('users')
     async getUsers(
         @Query('role') role: UserRole,
@@ -169,6 +167,11 @@ export class AdminController {
     @Delete('users/:id')
     async deleteUser(@Param('id') id: string) {
         return this.adminService.deleteUser(id);
+    }
+
+    @Delete('users/:id/permanent')
+    async deleteUserPermanent(@Param('id') id: string) {
+        return this.adminService.hardDeleteUser(id);
     }
 
     @Get('users/deleted/list')

@@ -13,6 +13,11 @@ import { Repository, Not } from 'typeorm';
 import { TripStatus } from 'src/utils/trips-status-enum';
 import { PartnerStatus } from 'src/utils/partner-status.enum';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
+import { Notification } from 'src/entities/notification.entity';
+import { Contract } from 'src/entities/contract.entity';
+import { SupportTicket } from 'src/entities/support-ticket.entity';
+import { WalletTransaction } from 'src/entities/wallet-transaction.entity';
+import { PointTransaction } from 'src/entities/point-transaction.entity';
 
 @Injectable()
 export class AdminService {
@@ -22,6 +27,11 @@ export class AdminService {
         @InjectRepository(Trip) private tripRepo: Repository<Trip>,
         @InjectRepository(PartnerProfile) private profileRepo: Repository<PartnerProfile>,
         @InjectRepository(BankAccount) private bankRepo: Repository<BankAccount>,
+        @InjectRepository(Notification) private notificationRepo: Repository<Notification>,
+        @InjectRepository(Contract) private contractRepo: Repository<Contract>,
+        @InjectRepository(SupportTicket) private ticketRepo: Repository<SupportTicket>,
+        @InjectRepository(WalletTransaction) private walletTxRepo: Repository<WalletTransaction>,
+        @InjectRepository(PointTransaction) private pointTxRepo: Repository<PointTransaction>,
         private socketGateway: SocketGateway,
     ) { }
 
@@ -279,6 +289,51 @@ export class AdminService {
         await this.userRepo.save(user);
 
         return { message: 'Xóa tài khoản thành công', userId: id };
+    }
+
+    async hardDeleteUser(id: string) {
+        const user = await this.userRepo.findOne({
+            where: { id, isDelete: true },
+            relations: ['servicePoints']
+        });
+
+        if (!user) {
+            throw new BadRequestException('Tài khoản chưa bị khóa hoặc không tồn tại');
+        }
+
+        await this.walletTxRepo.delete({ sender: { id } });
+        await this.walletTxRepo.delete({ receiver: { id } });
+        await this.walletTxRepo.delete({ employee: { id } });
+
+        if (user.servicePoints && user.servicePoints.length > 0) {
+            const spIds = user.servicePoints.map(sp => sp.id);
+
+            await this.pointTxRepo.createQueryBuilder()
+                .delete()
+                .from(PointTransaction)
+                .where("service_point_id IN (:...ids)", { ids: spIds })
+                .execute();
+
+            await this.tripRepo.createQueryBuilder()
+                .delete()
+                .from(Trip)
+                .where("service_point_id IN (:...ids)", { ids: spIds })
+                .execute();
+
+            await this.serviceRepo.delete(spIds);
+        }
+
+        await this.tripRepo.delete({ partner: { id } });
+
+        await this.profileRepo.delete({ user: { id } });
+        await this.bankRepo.delete({ user: { id } });
+        await this.notificationRepo.delete({ user: { id } });
+        await this.contractRepo.delete({ user: { id } });
+        await this.ticketRepo.delete({ user: { id } });
+
+        await this.userRepo.delete(id);
+
+        return { message: 'Xóa vĩnh viễn tài khoản thành công', userId: id };
     }
 
     async getDeletedUsers(page: number = 1, limit: number = 10, search?: string) {
