@@ -24,8 +24,8 @@ export class TasksService {
         try {
             const users = await this.userRepository.find({
                 where: [
-                    { role: UserRole.PARTNER },
-                    { role: UserRole.INTRODUCER }
+                    { role: UserRole.PARTNER, isDelete: false },
+                    { role: UserRole.INTRODUCER, isDelete: false }
                 ],
                 relations: ['partnerProfile'],
             });

@@ -209,6 +209,7 @@ export class AdminService {
         if (dto.password) {
             user.password_hash = await bcrypt.hash(dto.password, 10);
         }
+        console.log(dto.avatar);
         if (dto.avatar) user.avatar = dto.avatar;
 
         await this.userRepo.save(user);

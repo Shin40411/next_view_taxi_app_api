@@ -77,8 +77,14 @@ export class AdminController {
             },
         }),
         fileFilter: (req, file, cb) => {
-            if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-                return cb(new Error('Only image files are allowed!'), false);
+            if (file.fieldname === 'contract') {
+                if (!file.originalname.match(/\.(pdf|doc|docx|jpg|jpeg|png|gif|webp)$/i)) {
+                    return cb(new Error('Only image and document files are allowed for contract!'), false);
+                }
+            } else {
+                if (!file.originalname.match(/\.(pdf|jpg|jpeg|png|gif|webp)$/i)) {
+                    return cb(new Error('Only image files are allowed!'), false);
+                }
             }
             cb(null, true);
         },
@@ -132,7 +138,7 @@ export class AdminController {
             },
         }),
         fileFilter: (req, file, cb) => {
-            if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+            if (!file.originalname.match(/\.(pdf|jpg|jpeg|png|gif|webp)$/i)) {
                 return cb(new Error('Only image files are allowed!'), false);
             }
             cb(null, true);

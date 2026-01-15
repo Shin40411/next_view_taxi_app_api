@@ -1,4 +1,5 @@
 import { IsOptional, IsString, MaxLength, IsBoolean, IsNumber } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
 export class UpdateUserDto {
     @IsOptional()
@@ -32,6 +33,11 @@ export class UpdateUserDto {
 
     @IsOptional()
     @IsBoolean()
+    @Transform(({ value }) => {
+        if (value === 'true' || value === true) return true;
+        if (value === 'false' || value === false) return false;
+        return value;
+    })
     is_active?: boolean;
 
     // Partner specific
@@ -83,26 +89,32 @@ export class UpdateUserDto {
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     reward_amount?: number;
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     discount?: number;
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     advertising_budget?: number;
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     geofence_radius?: number; // meters
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     latitude?: number;
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     longitude?: number;
 
     @IsOptional()
