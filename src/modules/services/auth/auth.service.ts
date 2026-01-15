@@ -207,20 +207,8 @@ export class AuthService {
             throw new UnauthorizedException('Không tìm thấy tài khoản hoặc tài khoản đã bị khoá');
         }
 
-        console.log('Login debug:', {
-            username,
-            userId: user.id,
-            userRole: user.role,
-            enumAdmin: UserRole.ADMIN,
-            enumAccountant: UserRole.ACCOUNTANT,
-            isAdmin: user.role === UserRole.ADMIN,
-            isAccountant: user.role === UserRole.ACCOUNTANT,
-            strictCheck: user.role === 'ADMIN'
-        });
-
         const role = user.role?.toString().toUpperCase().trim();
         if (role === 'ADMIN' || role === 'ACCOUNTANT') {
-            console.log('Skipping OTP for privileged role:', role);
             return { message: 'Xác thực thành công', requireOtp: false };
         }
 
