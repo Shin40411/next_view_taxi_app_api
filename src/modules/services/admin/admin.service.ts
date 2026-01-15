@@ -181,7 +181,6 @@ export class AdminService {
             throw new NotFoundException('Không tìm thấy tài khoản');
         }
 
-        // Check for duplicates
         const duplicateConditions: any[] = [];
         if (dto.username && dto.username !== user.username) duplicateConditions.push({ username: dto.username, id: Not(id), isDelete: false });
         if (dto.email && dto.email !== user.email) duplicateConditions.push({ email: dto.email, id: Not(id), isDelete: false });
@@ -205,18 +204,14 @@ export class AdminService {
         if (dto.phone_number) user.phone_number = dto.phone_number;
         if (dto.email) user.email = dto.email;
         if (dto.full_name) user.full_name = dto.full_name;
-        // if (dto.is_active !== undefined) user.is_active = dto.is_active;
         if (dto.password) {
             user.password_hash = await bcrypt.hash(dto.password, 10);
         }
-        console.log(dto.avatar);
         if (dto.avatar) user.avatar = dto.avatar;
 
         await this.userRepo.save(user);
 
-        // Update Partner/Introducer Profile
         if ((user.role === UserRole.PARTNER || user.role === UserRole.INTRODUCER) && user.partnerProfile) {
-            // const profile = user.partnerProfile;
             const profileUpdates: any = {};
 
             if (dto.vehicle_plate) profileUpdates.vehicle_plate = dto.vehicle_plate;
@@ -237,7 +232,6 @@ export class AdminService {
             // }
         }
 
-        // Update Service Point (Customer)
         if (user.role === UserRole.CUSTOMER && user.servicePoints && user.servicePoints.length > 0) {
             const servicePoint = user.servicePoints[0];
             if (dto.address) servicePoint.address = dto.address;
@@ -254,7 +248,6 @@ export class AdminService {
             await this.serviceRepo.save(servicePoint);
         }
 
-        // Update Bank Account
         if (dto.bank_name || dto.account_number || dto.account_holder_name) {
             let bankAccount = user.bankAccount;
             if (!bankAccount) {

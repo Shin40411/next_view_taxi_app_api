@@ -41,7 +41,7 @@ export class AdminController {
     async getUser(@Param('id') id: string, @Request() req) {
         const user = await this.adminService.getUserById(id);
 
-        if (req.user.role !== 'ADMIN' && user.servicePoints) {
+        if (req.user.role !== 'ADMIN' && req.user.role !== 'MONITOR' && user.servicePoints) {
             user.servicePoints.forEach(sp => {
                 delete (sp as any).discount;
             });
