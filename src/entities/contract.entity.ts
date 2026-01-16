@@ -44,4 +44,10 @@ export class Contract {
         default: ContractStatus.INACTIVE,
     })
     status: ContractStatus;
+
+    @Column({ nullable: true })
+    expire_date: Date;
+
+    @Column({ nullable: true })
+    signed_date: Date;
 }

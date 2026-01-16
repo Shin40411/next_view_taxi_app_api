@@ -158,21 +158,39 @@ export class AuthService {
             throw new UnauthorizedException('Tài khoản đã bị khoá');
         }
 
-        // if (user.role !== UserRole.ADMIN && user.role !== UserRole.ACCOUNTANT) {
-        //     if (!otp) {
-        //         const isTrusted = await this.redis.get(`trusted_device:${user.username}`);
-        //         if (!isTrusted) {
-        //             throw new BadRequestException('Vui lòng nhập mã OTP để tiếp tục');
-        //         }
-        //     } else {
-        //         const storedOtp = await this.redis.get(`login_otp:${user.username}`);
-        //         if (!storedOtp || storedOtp !== otp) {
-        //             throw new BadRequestException('Mã OTP không chính xác hoặc đã hết hạn');
-        //         }
-        //         await this.redis.del(`login_otp:${user.username}`);
-        //         await this.redis.set(`trusted_device:${user.username}`, 'true', 'EX', 86400);
-        //     }
-        // }
+        if (user.role !== UserRole.ADMIN && user.role !== UserRole.ACCOUNTANT && user.role !== UserRole.MONITOR) {
+            if (!otp) {
+                const isTrusted = await this.redis.get(`trusted_device:${user.username}`);
+
+                if (!isTrusted) {
+                    throw new BadRequestException('Vui lòng nhập mã OTP để tiếp tục');
+                }
+            } else {
+                const storedOtp = await this.redis.get(`login_otp:${user.username}`);
+                if (!storedOtp || storedOtp !== otp) {
+                    throw new BadRequestException('Mã OTP không chính xác hoặc đã hết hạn');
+                }
+                await this.redis.del(`login_otp:${user.username}`);
+                await this.redis.set(`trusted_device:${user.username}`, 'true', 'EX', 86400 * 30);
+            }
+        }
+
+        const userRole = user.role.toString().toUpperCase();
+        if (['ADMIN', 'ACCOUNTANT', 'MONITOR'].includes(userRole)) {
+            // console.log(`[Login] Checking concurrent sessions for ${user.username} (${user.role})`);
+            const keys = await this.redis.keys(`auth:${user.id}:*`);
+            // console.log(`[Login] Found ${keys.length} active sessions:`, keys);
+
+            const legacyKeys = await this.redis.keys(`auth:${user.id}`);
+            if (legacyKeys.length > 0) {
+                keys.push(...legacyKeys);
+            }
+
+            if (keys.length > 0) {
+                await this.redis.del(...keys);
+                // console.log(`[Login] Deleted ${keys.length} sessions`);
+            }
+        }
 
         const sessionId = randomUUID();
         const payload = {
@@ -255,7 +273,6 @@ export class AuthService {
     async handleGoogleLogin(googleUser: any) {
         const { id, email, firstName, lastName, picture, phone, role } = googleUser;
 
-        // 1. Unified Lookup (Allow finding deleted users to reactivate them)
         let user = await this.userRepo.findOne({
             where: [
                 { google_id: id },
@@ -265,7 +282,6 @@ export class AuthService {
             relations: ['partnerProfile']
         });
 
-        // 2. If User Exists -> Update & Login
         if (user) {
             let hasUpdates = false;
 
@@ -295,7 +311,6 @@ export class AuthService {
             }
 
         } else {
-            // 3. Register New User (Transaction)
             const createdUser = await this.dataSource.transaction(async (entityManager) => {
                 const randomPass = Math.random().toString(36).slice(-8);
                 const salt = await bcrypt.genSalt();
@@ -363,7 +378,6 @@ export class AuthService {
             throw new UnauthorizedException('Không thể tạo hoặc tìm thấy người dùng.');
         }
 
-        // 4. Generate Token
         const sessionId = randomUUID();
         const payload = {
             sub: user.id,
@@ -397,8 +411,6 @@ export class AuthService {
         if (sessionId) {
             await this.redis.del(`auth:${userId}:${sessionId}`);
         } else {
-            // Fallback for old tokens or mass logout (optional, but safer to do nothing or handle specific logic)
-            // For now, let's try to delete the old key format just in case
             await this.redis.del(`auth:${userId}`);
         }
         return { message: 'Đăng xuất thành công' };
@@ -411,8 +423,6 @@ export class AuthService {
             const sessionId = payload.session_id;
 
             if (!sessionId) {
-                // Backward compatibility for tokens during migration (optional)
-                // Or just return null to force re-login
                 return null;
             }
 
@@ -566,7 +576,6 @@ export class AuthService {
 
         return { message: 'Mã OTP đã được gửi qua Zalo và Email' };
     }
-
 
     async verifyContractOtp(userId: string, otp: string) {
         const storedOtp = await this.redis.get(`contract_otp:${userId}`);

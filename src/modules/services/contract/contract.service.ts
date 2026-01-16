@@ -6,7 +6,7 @@ import { Contract } from 'src/entities/contract.entity';
 import { CreateContractDto } from 'src/modules/dtos/create-contract.dto';
 import { User } from 'src/entities/user.entity';
 import { ContractStatus } from 'src/utils/contract-status.enum';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
 import { NotificationService } from '../notification/notification.service';
 
@@ -79,6 +79,13 @@ export class ContractService {
             throw new NotFoundException('Không tìm thấy dữ liệu hợp đồng');
         }
 
+        const now = new Date();
+        contract.signed_date = now;
+
+        const expireDate = new Date(now);
+        expireDate.setFullYear(now.getFullYear() + 1);
+        contract.expire_date = expireDate;
+
         contract.status = ContractStatus.ACTIVE;
         const savedContract = await this.contractRepository.save(contract);
 
@@ -94,5 +101,19 @@ export class ContractService {
         }
 
         return savedContract;
+    }
+
+    async extend(id: string): Promise<Contract> {
+        const contract = await this.contractRepository.findOne({ where: { id } });
+        if (!contract) {
+            throw new NotFoundException('Không tìm thấy dữ liệu hợp đồng');
+        }
+
+        const currentExpire = contract.expire_date ? new Date(contract.expire_date) : new Date();
+        currentExpire.setFullYear(currentExpire.getFullYear() + 1);
+        contract.expire_date = currentExpire;
+        contract.status = ContractStatus.ACTIVE;
+
+        return this.contractRepository.save(contract);
     }
 }

@@ -22,7 +22,8 @@ export class ContractController {
 
     @Get('user/:userId')
     async getContractByUserId(@Request() req, @Param('userId') userId: string) {
-        if (req.user.role !== UserRole.ADMIN) {
+        console.log(req.user.role);
+        if (req.user.role !== UserRole.ADMIN && req.user.role !== UserRole.MONITOR) {
             throw new ForbiddenException('Only admin can view user contract');
         }
         return this.contractService.findOneByUserId(userId);
@@ -30,7 +31,7 @@ export class ContractController {
 
     @Get()
     async findAll(@Request() req, @Query('page') page: number, @Query('limit') limit: number) {
-        if (req.user.role !== UserRole.ADMIN) {
+        if (req.user.role !== UserRole.ADMIN && req.user.role !== UserRole.MONITOR) {
             throw new ForbiddenException('Only admin can view all contracts');
         }
         return this.contractService.findAll(Number(page) || 1, Number(limit) || 10);
@@ -38,7 +39,7 @@ export class ContractController {
 
     @Put(':id/terminate')
     async terminate(@Request() req, @Param('id') id: string) {
-        if (req.user.role !== UserRole.ADMIN) {
+        if (req.user.role !== UserRole.ADMIN && req.user.role !== UserRole.MONITOR) {
             throw new ForbiddenException('Only admin can terminate contracts');
         }
         return this.contractService.terminate(id);
@@ -46,11 +47,14 @@ export class ContractController {
 
     @Put(':id/approve')
     async approve(@Request() req, @Param('id') id: string) {
-        if (req.user.role !== UserRole.ADMIN) {
+        if (req.user.role !== UserRole.ADMIN && req.user.role !== UserRole.MONITOR) {
             throw new ForbiddenException('Only admin can approve contracts');
         }
         return this.contractService.approve(id);
     }
 
-
+    @Put(':id/extend')
+    async extend(@Request() req, @Param('id') id: string) {
+        return this.contractService.extend(id);
+    }
 }

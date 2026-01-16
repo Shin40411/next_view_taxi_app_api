@@ -6,6 +6,7 @@ import { Trip } from 'src/entities/trip.entity';
 import { TripStatus } from 'src/utils/trips-status-enum';
 import { Repository, Between, DataSource } from 'typeorm';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
+import { SearchServicePointDto } from '../../dtos/search-service-point.dto';
 
 @Injectable()
 export class PartnerService {
@@ -101,14 +102,26 @@ export class PartnerService {
         };
     }
 
-    async searchServicePoints(keyword: string) {
-        return this.dataSource.getRepository(ServicePoint)
+    async searchServicePoints(keyword: string): Promise<SearchServicePointDto[]> {
+        const servicePoints = await this.dataSource.getRepository(ServicePoint)
             .createQueryBuilder('sp')
-            .select(['sp.id', 'sp.name', 'sp.address', 'sp.reward_amount', 'sp.location', 'sp.advertising_budget']) // Lấy location để map zoom vào
+            .leftJoin('sp.owner', 'owner')
+            .select(['sp.id', 'sp.name', 'sp.address', 'sp.reward_amount', 'sp.location', 'sp.discount', 'sp.advertising_budget', 'owner.avatar'])
             .where('sp.name LIKE :keyword', { keyword: `%${keyword}%` })
             .orWhere('sp.address LIKE :keyword', { keyword: `%${keyword}%` })
             .take(10)
             .getMany();
+
+        return servicePoints.map(sp => ({
+            id: sp.id,
+            name: sp.name,
+            address: sp.address,
+            reward_amount: sp.reward_amount,
+            advertising_budget: sp.advertising_budget,
+            discount: sp.discount,
+            location: sp.location,
+            avatar: sp.owner?.avatar || null,
+        }));
     }
 
     async getActivePartners() {
