@@ -177,9 +177,7 @@ export class AuthService {
 
         const userRole = user.role.toString().toUpperCase();
         if (['ADMIN', 'ACCOUNTANT', 'MONITOR'].includes(userRole)) {
-            // console.log(`[Login] Checking concurrent sessions for ${user.username} (${user.role})`);
             const keys = await this.redis.keys(`auth:${user.id}:*`);
-            // console.log(`[Login] Found ${keys.length} active sessions:`, keys);
 
             const legacyKeys = await this.redis.keys(`auth:${user.id}`);
             if (legacyKeys.length > 0) {
@@ -188,7 +186,6 @@ export class AuthService {
 
             if (keys.length > 0) {
                 await this.redis.del(...keys);
-                // console.log(`[Login] Deleted ${keys.length} sessions`);
             }
         }
 

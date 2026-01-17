@@ -142,11 +142,11 @@ export class CustomerService {
                     reward_amount: rewardAmount
                 }, {
                     title: 'Chuyến đi hoàn thành',
-                    body: `Chuyến đi đã hoàn tất! Bạn nhận được ${rewardAmount} GoXu`
+                    body: `Chuyến đi đã hoàn tất! Bạn nhận được ${rewardAmount} Goxu`
                 });
             }
 
-            return { message: 'Đã xác nhận thành công. Tài xế đã nhận GoXu.' };
+            return { message: 'Đã xác nhận thành công. Tài xế đã nhận Goxu.' };
 
         } catch (err) {
             await queryRunner.rollbackTransaction();
