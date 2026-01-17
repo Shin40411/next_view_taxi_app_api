@@ -399,7 +399,13 @@ export class AdminService {
             .addGroupBy('bankAccount.account_number')
             .addGroupBy('bankAccount.account_holder_name')
             .leftJoin('trip.servicePoint', 'servicePoint')
-        // .addSelect('SUM(trip.reward_snapshot - (trip.reward_snapshot * COALESCE(servicePoint.discount, 0) / 100))', 'totalDiscounted');
+            .addSelect(
+                `SUM(
+                    (trip.reward_snapshot * COALESCE(servicePoint.discount, 0)) / 
+                    (100 - COALESCE(servicePoint.discount, 0))
+                )`,
+                'totalDiscounted'
+            )
 
         const now = new Date();
         let startDate: Date | undefined;
@@ -452,7 +458,7 @@ export class AdminService {
             totalTrips: Number(stat.totalTrips),
             totalGuests: Number(stat.totalGuests) || 0,
             totalPoints: Number(stat.totalPoints) || 0,
-            // totalDiscounted: Number(stat.totalDiscounted) || 0,
+            totalDiscounted: Math.floor(Number(stat.totalDiscounted) || 0),
             bankName: stat.bankAccount_bank_name || '',
             accountNumber: stat.bankAccount_account_number || '',
             accountHolderName: stat.bankAccount_account_holder_name || '',

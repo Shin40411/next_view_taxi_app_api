@@ -135,7 +135,7 @@ export class PartnerService {
             full_name: p.user.full_name,
             vehicle_plate: p.vehicle_plate,
             phone: p.user.username,
-            avatarUrl: '',
+            avatarUrl: p.user.avatar,
             current_location: p.current_location
         }));
     }
@@ -158,7 +158,7 @@ export class PartnerService {
             partner: { id: partnerId },
             servicePoint: { id: servicePointId },
             guest_count: guestCount,
-            reward_snapshot: Math.floor(((Number(servicePoint.reward_amount) || 0) * (Number(servicePoint.discount) || 0)) / 100) * guestCount,
+            reward_snapshot: Math.floor(((Number(servicePoint.reward_amount) || 0) * (100 - (Number(servicePoint.discount) || 0))) / 100) * guestCount,
             status: TripStatus.PENDING_CONFIRMATION,
         });
 
