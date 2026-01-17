@@ -142,13 +142,15 @@ export class AuthService {
     }
 
     async login(username: string, pass: string, otp?: string) {
-        const user = await this.userRepo.findOne({
+        const users = await this.userRepo.find({
             where: [
                 { username: username },
                 { email: username },
                 { phone_number: username }
             ]
         });
+
+        const user = users.find(u => !u.isDelete) || users[0];
 
         if (!user || !(await bcrypt.compare(pass, user.password_hash))) {
             throw new UnauthorizedException('Tên tài khoản hoặc mật khẩu không chính xác');
@@ -210,13 +212,14 @@ export class AuthService {
 
     async requestLoginOtp(body: { username: string; password: string }) {
         const { username, password } = body;
-        const user = await this.userRepo.findOne({
+        const users = await this.userRepo.find({
             where: [
                 { username: username },
                 { email: username },
                 { phone_number: username }
             ]
         });
+        const user = users.find(u => !u.isDelete) || users[0];
 
         if (!user || user.isDelete) {
             throw new UnauthorizedException('Không tìm thấy tài khoản hoặc tài khoản đã bị khoá');
@@ -434,13 +437,14 @@ export class AuthService {
     }
 
     async requestPasswordReset(username: string) {
-        const user = await this.userRepo.findOne({
+        const users = await this.userRepo.find({
             where: [
-                { username: username, isDelete: false },
-                { phone_number: username, isDelete: false },
-                { email: username, isDelete: false }
+                { username: username },
+                { phone_number: username },
+                { email: username }
             ]
         });
+        const user = users.find(u => !u.isDelete) || users[0];
         if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();

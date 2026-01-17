@@ -550,7 +550,7 @@ export class AdminService {
     async changeUserPassword(userId: string, newPassword: string) {
         const user = await this.userRepo.findOne({ where: { id: userId, isDelete: false } });
         if (!user) {
-            throw new NotFoundException('User not found');
+            throw new NotFoundException('Không tìm thấy tài khoản hoặc đã bị khóa');
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
