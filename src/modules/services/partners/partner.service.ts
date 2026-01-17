@@ -4,7 +4,7 @@ import { PartnerProfile } from 'src/entities/partner-profile.entity';
 import { ServicePoint } from 'src/entities/service-point.entity';
 import { Trip } from 'src/entities/trip.entity';
 import { TripStatus } from 'src/utils/trips-status-enum';
-import { Repository, Between, DataSource } from 'typeorm';
+import { Repository, Between, DataSource, Brackets } from 'typeorm';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
 import { SearchServicePointDto } from '../../dtos/search-service-point.dto';
 
@@ -107,8 +107,11 @@ export class PartnerService {
             .createQueryBuilder('sp')
             .leftJoin('sp.owner', 'owner')
             .select(['sp.id', 'sp.name', 'sp.address', 'sp.reward_amount', 'sp.location', 'sp.discount', 'sp.advertising_budget', 'owner.avatar'])
-            .where('sp.name LIKE :keyword', { keyword: `%${keyword}%` })
-            .orWhere('sp.address LIKE :keyword', { keyword: `%${keyword}%` })
+            .where('owner.isDelete = :isDelete', { isDelete: false })
+            .andWhere(new Brackets((qb) => {
+                qb.where('sp.name LIKE :keyword', { keyword: `%${keyword}%` })
+                    .orWhere('sp.address LIKE :keyword', { keyword: `%${keyword}%` });
+            }))
             .take(10)
             .getMany();
 
