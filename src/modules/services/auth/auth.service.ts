@@ -226,7 +226,7 @@ export class AuthService {
         }
 
         const role = user.role?.toString().toUpperCase().trim();
-        if (role === 'ADMIN' || role === 'ACCOUNTANT') {
+        if (role === 'ADMIN' || role === 'ACCOUNTANT' || role === 'MONITOR') {
             return { message: 'Xác thực thành công', requireOtp: false };
         }
 
