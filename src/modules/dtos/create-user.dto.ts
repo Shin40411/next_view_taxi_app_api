@@ -143,4 +143,8 @@ export class CreateUserDto {
     @IsOptional()
     @IsString()
     contract?: string;
+
+    @IsOptional()
+    @IsString()
+    wallet_expiry_date?: string;
 }

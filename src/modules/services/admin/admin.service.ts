@@ -96,6 +96,10 @@ export class AdminService {
             throw new ForbiddenException('Cannot create ADMIN user via this API');
         }
 
+        dto.username = dto.username.replace(/\s+/g, '');
+        if (dto.phone_number) dto.phone_number = dto.phone_number.replace(/\s+/g, '');
+        if (dto.email) dto.email = dto.email.trim();
+
         const orConditions: any[] = [
             { username: dto.username, isDelete: false }
         ];
@@ -117,11 +121,11 @@ export class AdminService {
 
         const hashedPassword = await bcrypt.hash(dto.password, 10);
         const newUser = this.userRepo.create({
-            username: dto.username,
-            email: dto.email,
-            phone_number: dto.phone_number || (dto.username.match(/^\d+$/) ? dto.username : null),
+            username: dto.username.trim(),
+            email: dto.email?.trim(),
+            phone_number: dto.phone_number?.trim() || (dto.username.match(/^\d+$/) ? dto.username.trim() : null),
             password_hash: hashedPassword,
-            full_name: dto.full_name,
+            full_name: dto.full_name.trim(),
             role: dto.role,
 
             tax_id: dto.tax_id,
@@ -164,6 +168,7 @@ export class AdminService {
                 location: `POINT(${latitude} ${longitude})`,
                 province: dto.province,
                 contract: dto.contract,
+                wallet_expiry_date: dto.wallet_expiry_date ? new Date(dto.wallet_expiry_date) : null,
             });
             await this.serviceRepo.save(servicePoint);
         }
@@ -191,6 +196,10 @@ export class AdminService {
             throw new NotFoundException('Không tìm thấy tài khoản');
         }
 
+        if (dto.username) dto.username = dto.username.replace(/\s+/g, '');
+        if (dto.phone_number) dto.phone_number = dto.phone_number.replace(/\s+/g, '');
+        if (dto.email) dto.email = dto.email.trim();
+
         const duplicateConditions: any[] = [];
         if (dto.username && dto.username !== user.username) duplicateConditions.push({ username: dto.username, id: Not(id), isDelete: false });
         if (dto.email && dto.email !== user.email) duplicateConditions.push({ email: dto.email, id: Not(id), isDelete: false });
@@ -211,9 +220,9 @@ export class AdminService {
         if (dto.username) {
             user.username = dto.username;
         }
-        if (dto.phone_number) user.phone_number = dto.phone_number;
-        if (dto.email) user.email = dto.email;
-        if (dto.full_name) user.full_name = dto.full_name;
+        if (dto.phone_number) user.phone_number = dto.phone_number.trim();
+        if (dto.email) user.email = dto.email.trim();
+        if (dto.full_name) user.full_name = dto.full_name.trim();
         if (dto.password) {
             user.password_hash = await bcrypt.hash(dto.password, 10);
         }
@@ -254,6 +263,7 @@ export class AdminService {
                 servicePoint.location = `POINT(${dto.latitude} ${dto.longitude})`;
             }
             if (dto.contract) servicePoint.contract = dto.contract;
+            if (dto.wallet_expiry_date) servicePoint.wallet_expiry_date = new Date(dto.wallet_expiry_date);
 
             await this.serviceRepo.save(servicePoint);
         }

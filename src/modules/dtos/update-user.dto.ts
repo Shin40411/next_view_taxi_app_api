@@ -126,6 +126,10 @@ export class UpdateUserDto {
     @IsString()
     contract?: string;
 
+    @IsOptional()
+    @IsString()
+    wallet_expiry_date?: string;
+
     // Bank Account
     @IsOptional()
     @IsString()

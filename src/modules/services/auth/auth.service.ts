@@ -58,6 +58,9 @@ export class AuthService {
             }
         }
 
+        dto.username = dto.username.replace(/\s+/g, '');
+        if (dto.email) dto.email = dto.email.trim();
+
         const storedOtp = await this.redis.get(`register_otp:${dto.username}`);
         if (!storedOtp || storedOtp !== dto.otp) {
             throw new BadRequestException('Mã OTP không chính xác hoặc đã hết hạn');
@@ -142,6 +145,7 @@ export class AuthService {
     }
 
     async login(username: string, pass: string, otp?: string) {
+        username = username.replace(/\s+/g, '');
         const users = await this.userRepo.find({
             where: [
                 { username: username },
@@ -591,12 +595,15 @@ export class AuthService {
     }
 
     async requestRegisterOtp(body: { username: string; email: string; fullName: string }) {
-        const { username, email, fullName } = body;
+        const { email, fullName } = body;
+        let { username } = body;
+        username = username.replace(/\s+/g, '');
+
         const existingUser = await this.userRepo.findOne({
             where: [
                 { username: username, isDelete: false },
                 { phone_number: username, isDelete: false },
-                ...(email ? [{ email: email, isDelete: false }] : [])
+                ...(email ? [{ email: email.trim(), isDelete: false }] : [])
             ]
         });
 

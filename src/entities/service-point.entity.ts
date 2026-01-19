@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, BeforeInsert } from 'typeorm';
 import { User } from './user.entity';
 
 @Entity('service_points')
@@ -37,7 +37,19 @@ export class ServicePoint {
     @Column({ nullable: true })
     contract: string;
 
+    @Column({ type: 'datetime', nullable: true, comment: 'Date when wallet expires' })
+    wallet_expiry_date: Date | null;
+
     @ManyToOne(() => User)
     @JoinColumn({ name: 'owner_id' })
     owner: User;
+
+    @BeforeInsert()
+    setDefaultExpiry() {
+        if (!this.wallet_expiry_date) {
+            const date = new Date();
+            date.setFullYear(date.getFullYear() + 1);
+            this.wallet_expiry_date = date;
+        }
+    }
 }
