@@ -107,8 +107,10 @@ export class PartnerController {
     async getMyRequests(
         @Request() req,
         @Query('page') page: number = 1,
-        @Query('limit') limit: number = 5
+        @Query('limit') limit: number = 5,
+        @Query('fromDate') fromDate?: string,
+        @Query('toDate') toDate?: string
     ) {
-        return this.partnerService.getMyTripRequests(req.user.sub, Number(page), Number(limit));
+        return this.partnerService.getMyTripRequests(req.user.sub, Number(page), Number(limit), fromDate, toDate);
     }
 }

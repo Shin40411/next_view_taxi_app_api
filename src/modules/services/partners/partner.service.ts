@@ -282,9 +282,29 @@ export class PartnerService {
         return { message: 'Đã huỷ đơn thành công' };
     }
 
-    async getMyTripRequests(partnerId: string, page: number = 1, limit: number = 5) {
+    async getMyTripRequests(partnerId: string, page: number = 1, limit: number = 5, fromDate?: string, toDate?: string) {
+        const whereCondition: any = { partner: { id: partnerId } };
+
+        if (fromDate && toDate) {
+            const start = new Date(fromDate);
+            const end = new Date(toDate);
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+                whereCondition.created_at = Between(start, end);
+            }
+        } else if (fromDate) {
+            const start = new Date(fromDate);
+            if (!isNaN(start.getTime())) {
+                start.setHours(0, 0, 0, 0);
+                const end = new Date();
+                end.setHours(23, 59, 59, 999);
+                whereCondition.created_at = Between(start, end);
+            }
+        }
+
         const [trips, total] = await this.tripRepo.findAndCount({
-            where: { partner: { id: partnerId } },
+            where: whereCondition,
             relations: ['servicePoint'],
             order: { created_at: 'DESC' },
             skip: (page - 1) * limit,
