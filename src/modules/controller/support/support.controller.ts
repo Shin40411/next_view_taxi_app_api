@@ -6,9 +6,11 @@ import { Roles } from 'src/decorators/roles.decorator';
 import { UserRole } from 'src/utils/user-role.enum';
 import { CreateTicketDto, ReplyTicketDto } from 'src/modules/dtos/support.dto';
 import { CreateFaqDto, UpdateFaqDto } from 'src/modules/dtos/faq.dto';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { SafeThrottlerGuard } from 'src/common/guards/safe-throttler.guard';
 
 @Controller('support')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, SafeThrottlerGuard)
 export class SupportController {
     constructor(private readonly supportService: SupportService) { }
 
@@ -28,7 +30,7 @@ export class SupportController {
 
     @Get('admin')
     @UseGuards(RolesGuard)
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.MONITOR)
     async getAllTickets(
         @Query('fromDate') fromDate?: string,
         @Query('toDate') toDate?: string,
@@ -38,16 +40,14 @@ export class SupportController {
 
     @Put(':id/reply')
     @UseGuards(RolesGuard)
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.MONITOR)
     async replyTicket(@Param('id') id: string, @Body() dto: ReplyTicketDto) {
         return this.supportService.replyTicket(id, dto);
     }
 
-    // FAQ Endpoints
-
     @Post('faqs')
     @UseGuards(RolesGuard)
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.MONITOR)
     async createFaq(@Body() dto: CreateFaqDto) {
         return this.supportService.createFaq(dto);
     }
@@ -63,14 +63,14 @@ export class SupportController {
 
     @Put('faqs/:id')
     @UseGuards(RolesGuard)
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.MONITOR)
     async updateFaq(@Param('id') id: string, @Body() dto: UpdateFaqDto) {
         return this.supportService.updateFaq(id, dto);
     }
 
     @Delete('faqs/:id')
     @UseGuards(RolesGuard)
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.MONITOR)
     async deleteFaq(@Param('id') id: string) {
         return this.supportService.deleteFaq(id);
     }

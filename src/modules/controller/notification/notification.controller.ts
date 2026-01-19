@@ -1,9 +1,10 @@
 import { Controller, Get, Param, Patch, Request, UseGuards, Delete, Query } from '@nestjs/common';
 import { NotificationService } from '../../services/notification/notification.service';
 import { AuthGuard } from '../../auth/guards/auth.guard';
+import { SafeThrottlerGuard } from 'src/common/guards/safe-throttler.guard';
 
 @Controller('notifications')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, SafeThrottlerGuard)
 export class NotificationController {
     constructor(private readonly notificationService: NotificationService) { }
 

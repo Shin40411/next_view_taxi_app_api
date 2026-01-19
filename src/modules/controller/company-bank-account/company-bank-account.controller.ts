@@ -2,8 +2,11 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@n
 import { CompanyBankAccountService } from '../../services/company-bank-account/company-bank-account.service';
 import { CreateCompanyBankAccountDto } from '../../dtos/create-company-bank-account.dto';
 import { UpdateCompanyBankAccountDto } from '../../dtos/update-company-bank-account.dto';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { SafeThrottlerGuard } from 'src/common/guards/safe-throttler.guard';
 
 @Controller('company-bank-account')
+@UseGuards(SafeThrottlerGuard)
 export class CompanyBankAccountController {
     constructor(private readonly service: CompanyBankAccountService) { }
 

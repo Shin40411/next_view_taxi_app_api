@@ -10,12 +10,16 @@ import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 import { GoogleAuthGuard } from 'src/modules/auth/guards/google-auth.guard';
 import { ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from 'src/modules/dtos/forgot-password.dto';
+import { Throttle } from '@nestjs/throttler';
+import { SafeThrottlerGuard } from 'src/common/guards/safe-throttler.guard';
 
 @Controller('auth')
+@UseGuards(SafeThrottlerGuard)
 export class AuthController {
     constructor(private authService: AuthService) { }
 
     @Post('register')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     @UseInterceptors(FileFieldsInterceptor([
         { name: 'id_card_front', maxCount: 1 },
         { name: 'id_card_back', maxCount: 1 },
@@ -73,6 +77,7 @@ export class AuthController {
     }
 
     @Post('login')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async login(@Body() body: LoginDto & { otp?: string }) {
         return this.authService.login(body.username, body.password, body.otp);
     }
@@ -84,16 +89,19 @@ export class AuthController {
     }
 
     @Post('forgot-password')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async forgotPassword(@Body() body: ForgotPasswordDto) {
         return this.authService.requestPasswordReset(body.username);
     }
 
     @Post('verify-otp')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async verifyOtp(@Body() body: VerifyOtpDto) {
         return this.authService.verifyOtp(body.username, body.otp);
     }
 
     @Post('reset-password')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async resetPassword(@Body() body: ResetPasswordDto) {
         return this.authService.confirmPasswordReset(body.username, body.otp, body.newPassword);
     }

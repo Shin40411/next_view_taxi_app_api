@@ -6,9 +6,11 @@ import { PartnerService } from 'src/modules/services/partners/partner.service';
 import { WalletService } from 'src/modules/services/wallet/wallet.service';
 import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { CreateWithdrawDto, CreateTransferDto, CreateDepositDto } from 'src/modules/dtos/wallet.dto';
+import { Throttle } from '@nestjs/throttler';
+import { SafeThrottlerGuard } from 'src/common/guards/safe-throttler.guard';
 
 @Controller('partner')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, SafeThrottlerGuard)
 export class PartnerController {
     constructor(
         private readonly partnerService: PartnerService,
@@ -16,11 +18,13 @@ export class PartnerController {
     ) { }
 
     @Post('wallet/withdraw')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async requestWithdraw(@Request() req, @Body() body: CreateWithdrawDto) {
         return this.walletService.requestWithdraw(req.user.sub, body);
     }
 
     @Post('wallet/deposit')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     @UseInterceptors(FileInterceptor('bill', {
         storage: diskStorage({
             destination: './uploads/bills',
@@ -37,7 +41,6 @@ export class PartnerController {
             body.bill = file.path;
         }
 
-        // Fallback for amount if not mapped correctly
         if (body.amount === undefined && req.body.amount) {
             body.amount = Number(req.body.amount);
         } else if (body.amount) {
@@ -48,6 +51,7 @@ export class PartnerController {
     }
 
     @Post('wallet/transfer')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async transfer(@Request() req, @Body() body: CreateTransferDto) {
         return this.walletService.transfer(req.user.sub, body);
     }
@@ -67,6 +71,7 @@ export class PartnerController {
     }
 
     @Post('create-request')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async createTripRequest(
         @Request() req,
         @Body() body: { servicePointId: string; guestCount: number }
@@ -75,6 +80,7 @@ export class PartnerController {
     }
 
     @Post('confirm-arrival/:tripId')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async confirmArrival(
         @Request() req,
         @Param('tripId') tripId: string
@@ -83,6 +89,7 @@ export class PartnerController {
     }
 
     @Post('cancel-request/:tripId')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async cancelRequest(
         @Request() req,
         @Param('tripId') tripId: string,

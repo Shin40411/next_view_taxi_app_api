@@ -1,12 +1,13 @@
-
 import { Controller, Get, Post, Body, UseGuards, Request, ForbiddenException, Query, Put, Param } from '@nestjs/common';
 import { ContractService } from 'src/modules/services/contract/contract.service';
 import { CreateContractDto } from 'src/modules/dtos/create-contract.dto';
 import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { UserRole } from 'src/utils/user-role.enum';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { SafeThrottlerGuard } from 'src/common/guards/safe-throttler.guard';
 
 @Controller('contracts')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, SafeThrottlerGuard)
 export class ContractController {
     constructor(private readonly contractService: ContractService) { }
 

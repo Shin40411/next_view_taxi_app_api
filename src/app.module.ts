@@ -46,6 +46,7 @@ import { DecryptMiddleware } from './common/middlewares/decrypt.middleware';
 import { SeedController } from './modules/controller/seed/seed.controller';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TasksModule } from './modules/module/tasks.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -76,6 +77,10 @@ import { TasksModule } from './modules/module/tasks.module';
     CompanyBankAccountModule,
     ScheduleModule.forRoot(),
     TasksModule,
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 60,
+    }]),
   ],
   controllers: [SeedController, TripsController, AdminController, SystemAdminController, PartnerController, CustomerController, ContractController, WalletController],
   providers: [

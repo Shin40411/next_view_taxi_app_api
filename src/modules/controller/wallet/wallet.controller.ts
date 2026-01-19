@@ -2,9 +2,11 @@ import { Controller, Get, Post, Body, Query, UseGuards, Request, ForbiddenExcept
 import { WalletService } from 'src/modules/services/wallet/wallet.service';
 import { AuthGuard } from 'src/modules/auth/guards/auth.guard';
 import { UserRole } from 'src/utils/user-role.enum';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { SafeThrottlerGuard } from 'src/common/guards/safe-throttler.guard';
 
 @Controller('wallets')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, SafeThrottlerGuard)
 export class WalletController {
     constructor(private readonly walletService: WalletService) { }
 

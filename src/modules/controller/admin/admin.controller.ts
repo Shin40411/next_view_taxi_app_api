@@ -11,9 +11,11 @@ import { AdminService } from 'src/modules/services/admin/admin.service';
 import { CreateAdminDto, UpdateAdminDto } from 'src/modules/dtos/admin-user.dto';
 import { WalletService } from 'src/modules/services/wallet/wallet.service';
 import { TransactionStatus } from 'src/utils/wallet-transaction-enum';
+import { Throttle } from '@nestjs/throttler';
+import { SafeThrottlerGuard } from 'src/common/guards/safe-throttler.guard';
 
 @Controller('admin')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, SafeThrottlerGuard)
 export class AdminController {
     constructor(
         private readonly adminService: AdminService,
@@ -48,6 +50,7 @@ export class AdminController {
     }
 
     @Post('users')
+    @Throttle({ default: { limit: 10, ttl: 60000 } })
     @UseInterceptors(FileFieldsInterceptor([
         { name: 'id_card_front', maxCount: 1 },
         { name: 'id_card_back', maxCount: 1 },
@@ -76,12 +79,12 @@ export class AdminController {
         }),
         fileFilter: (req, file, cb) => {
             if (file.fieldname === 'contract') {
-                if (!file.originalname.match(/\.(pdf|doc|docx|jpg|jpeg|png|gif|webp)$/i)) {
-                    return cb(new Error('Only image and document files are allowed for contract!'), false);
+                if (!file.originalname.match(/\.(pdf|doc|docx|jpg|jpeg|png|gif|webp|jfif)$/i)) {
+                    return cb(new Error('Chỉ chấp nhận file PDF, DOC, DOCX, JPG, JPEG, PNG, GIF, WEBP, JFIF!'), false);
                 }
             } else {
-                if (!file.originalname.match(/\.(pdf|jpg|jpeg|png|gif|webp)$/i)) {
-                    return cb(new Error('Only image files are allowed!'), false);
+                if (!file.originalname.match(/\.(pdf|jpg|jpeg|png|gif|webp|jfif)$/i)) {
+                    return cb(new Error('Chỉ chấp nhận file PDF, JPG, JPEG, PNG, GIF, WEBP, JFIF!'), false);
                 }
             }
             cb(null, true);
@@ -110,6 +113,7 @@ export class AdminController {
     }
 
     @Put('users/:id')
+    @Throttle({ default: { limit: 10, ttl: 60000 } })
     @UseInterceptors(FileFieldsInterceptor([
         { name: 'id_card_front', maxCount: 1 },
         { name: 'id_card_back', maxCount: 1 },
@@ -137,8 +141,8 @@ export class AdminController {
             },
         }),
         fileFilter: (req, file, cb) => {
-            if (!file.originalname.match(/\.(pdf|jpg|jpeg|png|gif|webp)$/i)) {
-                return cb(new Error('Only image files are allowed!'), false);
+            if (!file.originalname.match(/\.(pdf|jpg|jpeg|png|gif|webp|jfif)$/i)) {
+                return cb(new Error('Chỉ chấp nhận file PDF, JPG, JPEG, PNG, GIF, WEBP, JFIF!'), false);
             }
             cb(null, true);
         },

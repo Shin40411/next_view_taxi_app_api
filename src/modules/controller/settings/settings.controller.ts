@@ -4,10 +4,11 @@ import { Setting } from 'src/entities/setting.entity';
 import { UpdateSettingsDto } from 'src/modules/dtos/update-settings.dto';
 import { SettingsService } from 'src/modules/services/settings/settings.service';
 import { UserRole } from 'src/utils/user-role.enum';
-
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { SafeThrottlerGuard } from 'src/common/guards/safe-throttler.guard';
 
 @Controller('settings')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, SafeThrottlerGuard)
 export class SettingsController {
     constructor(private readonly settingsService: SettingsService) { }
 
