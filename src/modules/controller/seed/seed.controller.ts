@@ -10,8 +10,11 @@ import { ServicePoint } from '../../../entities/service-point.entity';
 import { Trip } from '../../../entities/trip.entity';
 import { UserRole } from 'src/utils/user-role.enum';
 import { TripStatus } from 'src/utils/trips-status-enum';
+import { UseGuards } from '@nestjs/common';
+import { ApiKeyGuard } from 'src/modules/auth/guards/api-key.guard';
 
 @Controller('seed')
+@UseGuards(ApiKeyGuard)
 export class SeedController {
     constructor(
         @InjectRepository(User) private userRepo: Repository<User>,
@@ -24,7 +27,7 @@ export class SeedController {
     async generateFakeData() {
         const admin = this.userRepo.create({
             username: 'admin',
-            password_hash: await bcrypt.hash('123456', 10),
+            password_hash: await bcrypt.hash('Admin@12345', 10),
             full_name: 'Admin System',
             role: UserRole.ADMIN,
         });

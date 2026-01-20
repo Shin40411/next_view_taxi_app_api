@@ -64,4 +64,47 @@ export class UpdateSettingsDto {
     @IsString()
     @MaxLength(255)
     mail_from?: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(255)
+    email_receive?: string;
+
+    @IsOptional()
+    @IsString()
+    tpl_trip_request?: string;
+
+    @IsOptional()
+    @IsString()
+    tpl_driver_arrived?: string;
+
+    @IsOptional()
+    @IsString()
+    tpl_trip_cancelled?: string;
+
+    @IsOptional()
+    @IsString()
+    tpl_trip_confirmed?: string;
+
+    @IsOptional()
+    @IsString()
+    tpl_trip_rejected?: string;
+
+    @IsOptional()
+    @IsString()
+    tpl_wallet_success?: string;
+
+    @IsOptional()
+    @IsString()
+    tpl_wallet_failed?: string;
+
+
+
+    @IsOptional()
+    @IsString()
+    tpl_contract_approved?: string;
+
+    @IsOptional()
+    @IsString()
+    tpl_contract_terminated?: string;
 }

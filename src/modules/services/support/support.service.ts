@@ -7,6 +7,8 @@ import { User } from 'src/entities/user.entity';
 import { NotificationService } from 'src/modules/services/notification/notification.service';
 import { Faq } from 'src/entities/faq.entity';
 import { CreateFaqDto, UpdateFaqDto } from 'src/modules/dtos/faq.dto';
+import { MailService } from '../mail/mail.service';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class SupportService {
@@ -18,6 +20,8 @@ export class SupportService {
         @InjectRepository(Faq)
         private faqRepo: Repository<Faq>,
         private notificationService: NotificationService,
+        private mailService: MailService,
+        private settingsService: SettingsService,
     ) { }
 
     async createTicket(userId: string, dto: CreateTicketDto) {
@@ -30,7 +34,21 @@ export class SupportService {
             content: dto.content,
         });
 
-        return this.ticketRepo.save(ticket);
+
+
+        await this.ticketRepo.save(ticket);
+
+        const settings = await this.settingsService.getSettings();
+        if (settings?.email_receive) {
+            await this.mailService.sendSupportTicketNotification(
+                settings.email_receive,
+                user.full_name,
+                ticket.subject,
+                ticket.content,
+            );
+        }
+
+        return ticket;
     }
 
     async getUserTickets(userId: string, fromDate?: string, toDate?: string) {

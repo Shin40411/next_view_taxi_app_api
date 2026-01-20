@@ -13,6 +13,8 @@ import { CreateDepositDto, CreateWithdrawDto, CreateTransferDto, IBankListRespon
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
 import { VietQR } from 'vietqr';
 
+import { SettingsService } from '../settings/settings.service';
+
 @Injectable()
 export class WalletService {
     constructor(
@@ -24,6 +26,7 @@ export class WalletService {
         private walletTransactionRepository: Repository<WalletTransaction>,
         private dataSource: DataSource,
         private socketGateway: SocketGateway,
+        private settingsService: SettingsService,
     ) { }
 
     private getTransactionTypeName(type: TransactionType): string {
@@ -43,6 +46,25 @@ export class WalletService {
         if (!phone || phone.length < 7) return phone;
         return phone.substring(0, 3) + '****' + phone.substring(phone.length - 3);
     }
+
+    private maskBankAccount(accountNumber: string): string {
+        if (!accountNumber || accountNumber.length < 4) return accountNumber;
+        return accountNumber.substring(0, 1) + '****' + accountNumber.substring(accountNumber.length - 4);
+    }
+
+    private replaceTags(template: string, user: User, amountFormatted: number, transaction: WalletTransaction, typeName: string): string {
+        let content = template;
+        const accountInfo = this.maskBankAccount(user.bankAccount?.account_number || '') + ' - ' + user.bankAccount?.bank_name;
+
+        content = content.replace(/\[user\]/g, user.full_name || 'Người dùng');
+        content = content.replace(/\[amount\]/g, `${amountFormatted.toString()} Goxu`);
+        content = content.replace(/\[status\]/g, transaction.status === TransactionStatus.SUCCESS ? 'Thành công' : 'Thất bại');
+        content = content.replace(/\[reason\]/g, transaction.reason || 'Không có lý do cụ thể');
+        content = content.replace(/\[time\]/g, new Date().toLocaleString('vi-VN'));
+        content = content.replace(/\[account_number\]/g, accountInfo);
+        content = content.replace(/\[transaction_type\]/g, typeName);
+        return content;
+    };
 
     private sanitizeTransaction(transaction: WalletTransaction): WalletTransaction {
         if (transaction.sender) {
@@ -134,7 +156,6 @@ export class WalletService {
             .take(limit)
             .getManyAndCount();
 
-        // Mask phone numbers and sanitize
         const maskedData = data.map(tx => {
             if (tx.sender) tx.sender.username = this.maskPhone(tx.sender.username);
             if (tx.receiver) tx.receiver.username = this.maskPhone(tx.receiver.username);
@@ -353,7 +374,7 @@ export class WalletService {
 
             const user = await queryRunner.manager.findOne(User, {
                 where: { id: transaction.sender.id },
-                relations: ['partnerProfile', 'servicePoints'],
+                relations: ['partnerProfile', 'servicePoints', 'bankAccount'],
                 lock: { mode: 'pessimistic_write' }
             });
 
@@ -362,7 +383,6 @@ export class WalletService {
             transaction.employee = admin;
             if (reason) transaction.reason = reason;
 
-            // --- XỬ LÝ NẠP TIỀN (DEPOSIT) ---
             if (transaction.type === TransactionType.DEPOSIT) {
                 const amountToAdd = Number(transaction.amount);
                 if (amountToAdd > 0 && accept) {
@@ -378,7 +398,6 @@ export class WalletService {
                     transaction.status = TransactionStatus.FALSE;
                 }
             }
-            // --- XỬ LÝ RÚT TIỀN (WITHDRAW) ---
             else if (transaction.type === TransactionType.WITHDRAW) {
                 if (accept) {
                     transaction.status = TransactionStatus.SUCCESS;
@@ -404,27 +423,58 @@ export class WalletService {
 
             // SEND NOTIFICATION
             const typeName = this.getTransactionTypeName(transaction.type);
-            const amountFormatted = Number(transaction.amount).toLocaleString('vi-VN');
+            const amountFormatted = Math.floor(Number(transaction.amount));
+            const settings = await this.settingsService.getSettings();
 
             if (transaction.status === TransactionStatus.SUCCESS) {
+                let body = `Yêu cầu ${typeName} số ${amountFormatted} Goxu đã được duyệt thành công.`;
+                if (settings?.tpl_wallet_success) {
+                    body = this.replaceTags(settings.tpl_wallet_success, user, amountFormatted, transaction, typeName);
+                }
+
+                const socketData = {
+                    id: transaction.id,
+                    amount: transaction.amount,
+                    type: transaction.type,
+                    status: transaction.status,
+                    reason: transaction.reason,
+                    created_at: transaction.created_at,
+                    bill: transaction.bill
+                };
+
                 this.socketGateway.sendToUser(
                     user.id,
                     'wallet_transaction_updated',
-                    transaction,
+                    socketData,
                     {
                         title: 'Giao dịch thành công',
-                        body: `Yêu cầu ${typeName} số tiền ${amountFormatted} đã được duyệt thành công.`,
+                        body: body,
                         type: 'WALLET_SUCCESS'
                     }
                 );
             } else if (transaction.status === TransactionStatus.FALSE) {
+                let body = `Yêu cầu ${typeName} số ${amountFormatted} Goxu đã bị từ chối. Lý do: ${transaction.reason || 'Không có lý do cụ thể'}.`;
+                if (settings?.tpl_wallet_failed) {
+                    body = this.replaceTags(settings.tpl_wallet_failed, user, amountFormatted, transaction, typeName);
+                }
+
+                const socketData = {
+                    id: transaction.id,
+                    amount: transaction.amount,
+                    type: transaction.type,
+                    status: transaction.status,
+                    reason: transaction.reason,
+                    created_at: transaction.created_at,
+                    bill: transaction.bill
+                };
+
                 this.socketGateway.sendToUser(
                     user.id,
                     'wallet_transaction_updated',
-                    transaction,
+                    socketData,
                     {
                         title: 'Giao dịch bị từ chối',
-                        body: `Yêu cầu ${typeName} số tiền ${amountFormatted} đã bị từ chối. Lý do: ${transaction.reason || 'Không có lý do cụ thể'}.`,
+                        body: body,
                         type: 'WALLET_FAILED'
                     }
                 );

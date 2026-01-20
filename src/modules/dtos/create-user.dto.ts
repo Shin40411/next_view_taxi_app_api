@@ -147,4 +147,9 @@ export class CreateUserDto {
     @IsOptional()
     @IsString()
     wallet_expiry_date?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
+    send_notification?: boolean;
 }

@@ -8,6 +8,7 @@ import { User } from 'src/entities/user.entity';
 import { ContractStatus } from 'src/utils/contract-status.enum';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
+import { SettingsService } from '../settings/settings.service';
 import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class ContractService {
         private contractRepository: Repository<Contract>,
         private socketGateway: SocketGateway,
         private notificationService: NotificationService,
+        private settingsService: SettingsService,
     ) { }
 
     async create(createContractDto: CreateContractDto, user: User): Promise<Contract> {
@@ -59,9 +61,16 @@ export class ContractService {
         const savedContract = await this.contractRepository.save(contract);
 
         if (contract.user) {
+            const settings = await this.settingsService.getSettings();
+            let body = 'Hợp đồng của bạn đã bị hủy bỏ, vui lòng nhập đúng thông tin hợp lệ và ký hợp đồng mới.';
+
+            if (settings?.tpl_contract_terminated) {
+                body = settings.tpl_contract_terminated;
+            }
+
             const notificationData = {
                 title: 'Hợp đồng bị hủy bỏ',
-                body: 'Hợp đồng của bạn đã bị hủy bỏ, vui lòng nhập đúng thông tin hợp lệ và ký hợp đồng mới.',
+                body: body,
                 type: 'contract:terminated'
             };
 
@@ -90,9 +99,16 @@ export class ContractService {
         const savedContract = await this.contractRepository.save(contract);
 
         if (contract.user) {
+            const settings = await this.settingsService.getSettings();
+            let body = 'Hợp đồng của bạn đã được duyệt, bạn có thể bắt đầu sử dụng ví.';
+
+            if (settings?.tpl_contract_approved) {
+                body = settings.tpl_contract_approved;
+            }
+
             const notificationData = {
                 title: 'Hợp đồng đã được duyệt',
-                body: 'Hợp đồng của bạn đã được duyệt, bạn có thể bắt đầu sử dụng ví.',
+                body: body,
                 type: 'contract:approved'
             };
             this.socketGateway.sendToUser(contract.user.id, 'contract:approved', notificationData);

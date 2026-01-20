@@ -46,4 +46,7 @@ export class Setting {
 
     @Column({ nullable: true })
     mail_from: string;
+
+    @Column({ nullable: true })
+    email_receive: string;
 }

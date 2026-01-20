@@ -9,11 +9,16 @@ import { AuthModule } from './auth.module';
 import { NotificationModule } from 'src/modules/module/notification.module';
 
 
+import { MailModule } from './mail.module';
+import { SettingsModule } from './settings.module';
+
 @Module({
     imports: [
         TypeOrmModule.forFeature([SupportTicket, User, Faq]),
         AuthModule,
-        NotificationModule
+        NotificationModule,
+        MailModule,
+        SettingsModule
     ],
     controllers: [SupportController],
     providers: [SupportService],

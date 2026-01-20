@@ -7,6 +7,7 @@ import { TripStatus } from 'src/utils/trips-status-enum';
 import { Repository, Between, DataSource, Brackets } from 'typeorm';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
 import { SearchServicePointDto } from '../../dtos/search-service-point.dto';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class PartnerService {
@@ -15,6 +16,7 @@ export class PartnerService {
         @InjectRepository(Trip) private tripRepo: Repository<Trip>,
         private dataSource: DataSource,
         private socketGateway: SocketGateway,
+        private settingsService: SettingsService,
     ) { }
 
     async getStatistics(partnerId: string, range: 'today' | 'yesterday' | 'week' | 'month') {
@@ -175,16 +177,17 @@ export class PartnerService {
         });
 
         if (spWithOwner && spWithOwner.owner) {
-            // console.log('Emitting customer:new_trip_request to:', spWithOwner.owner.id);
-            // console.log('Payload:', {
-            //     trip_id: newTrip.trip_id,
-            //     guest_count: guestCount,
-            //     partner: {
-            //         id: partnerId,
-            //         name: partner?.user.full_name,
-            //         vehicle_plate: partner?.vehicle_plate
-            //     }
-            // });
+            const settings = await this.settingsService.getSettings();
+            let body = `Bạn có yêu cầu đặt xe mới từ ${partner?.user.full_name} (${guestCount} khách)`;
+
+            if (settings?.tpl_trip_request) {
+                body = settings.tpl_trip_request;
+                body = body.replace(/\[partner_name\]/g, partner?.user.full_name || 'Tài xế');
+                body = body.replace(/\[guest_count\]/g, guestCount.toString());
+                body = body.replace(/\[vehicle_plate\]/g, partner?.vehicle_plate || 'Không có');
+                body = body.replace(/\[created_time\]/g, new Date().toLocaleString() || 'Không có');
+            }
+
             this.socketGateway.sendToUser(spWithOwner.owner.id, 'customer:new_trip_request', {
                 trip_id: newTrip.trip_id,
                 guest_count: guestCount,
@@ -195,7 +198,7 @@ export class PartnerService {
                 }
             }, {
                 title: 'Yêu cầu chuyến xe',
-                body: `Bạn có yêu cầu đặt xe mới từ ${partner?.user.full_name} (${guestCount} khách)`
+                body: body
             });
         }
 
@@ -229,6 +232,17 @@ export class PartnerService {
         });
 
         if (fullTrip && fullTrip.servicePoint.owner) {
+            const settings = await this.settingsService.getSettings();
+            let body = `Tài xế ${partner?.user.full_name} đã đến điểm đón`;
+
+            if (settings?.tpl_driver_arrived) {
+                body = settings.tpl_driver_arrived;
+                body = body.replace(/\[partner_name\]/g, partner?.user.full_name || 'Tài xế');
+                body = body.replace(/\[guest_count\]/g, trip.guest_count.toString());
+                body = body.replace(/\[vehicle_plate\]/g, partner?.vehicle_plate || 'Không có');
+                body = body.replace(/\[arrival_time\]/g, trip.arrival_time?.toLocaleString() || 'Không có');
+            }
+
             this.socketGateway.sendToUser(fullTrip.servicePoint.owner.id, 'customer:driver_arrived', {
                 trip_id: trip.trip_id,
                 arrival_time: trip.arrival_time,
@@ -239,7 +253,7 @@ export class PartnerService {
                 }
             }, {
                 title: 'Tài xế đã đến',
-                body: `Tài xế ${partner?.user.full_name} đã đến điểm đón`
+                body: body
             });
         }
 
@@ -270,12 +284,24 @@ export class PartnerService {
         });
 
         if (fullTrip && fullTrip.servicePoint.owner) {
+            const partner = await this.profileRepo.findOne({ where: { user: { id: partnerId } }, relations: ['user'] });
+            const settings = await this.settingsService.getSettings();
+            let body = `Tài xế đã huỷ chuyến đi. Lý do: ${reason || 'Không có lý do'}`;
+
+            if (settings?.tpl_trip_cancelled) {
+                body = settings.tpl_trip_cancelled;
+                body = body.replace(/\[partner_name\]/g, partner?.user.full_name || 'Tài xế');
+                body = body.replace(/\[guest_count\]/g, trip.guest_count.toString());
+                body = body.replace(/\[reason\]/g, reason || 'Không có lý do');
+                body = body.replace(/\[created_time\]/g, trip.created_at.toLocaleString());
+            }
+
             this.socketGateway.sendToUser(fullTrip.servicePoint.owner.id, 'customer:trip_cancelled', {
                 trip_id: trip.trip_id,
                 reason: reason || 'Tài xế đã huỷ chuyến'
             }, {
                 title: 'Chuyến đi bị huỷ',
-                body: `Tài xế đã huỷ chuyến đi. Lý do: ${reason || 'Không có lý do'}`
+                body: body
             });
         }
 

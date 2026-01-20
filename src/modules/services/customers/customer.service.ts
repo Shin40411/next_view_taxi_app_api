@@ -10,6 +10,7 @@ import { TripStatus } from 'src/utils/trips-status-enum';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
 import { PartnerService } from 'src/modules/services/partners/partner.service';
 import { PartnerProfile } from 'src/entities/partner-profile.entity';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class CustomerService {
@@ -22,6 +23,7 @@ export class CustomerService {
         private dataSource: DataSource,
         private socketGateway: SocketGateway,
         private partnerService: PartnerService,
+        private settingsService: SettingsService,
     ) { }
 
     private async getPaginatedTrips(ownerId: string, status: TripStatus | 'ALL', page: number, limit: number) {
@@ -133,16 +135,27 @@ export class CustomerService {
 
             await queryRunner.commitTransaction();
 
-            // Notify Driver
-            // trip.partner is loaded in findOne above
             if (trip.partner) {
+                const settings = await this.settingsService.getSettings();
+                let body = `Chuyến đi đã hoàn tất! Bạn nhận được ${rewardAmount} Goxu`;
+
+                if (settings?.tpl_trip_confirmed) {
+                    body = settings.tpl_trip_confirmed;
+                    body = body.replace(/\[service_name\]/g, trip.servicePoint.name || 'Không có');
+                    body = body.replace(/\[partner_name\]/g, trip.partner.full_name || 'Tài xế');
+                    body = body.replace(/\[guest_count\]/g, actual_guest_count.toString());
+                    body = body.replace(/\[vehicle_plate\]/g, driverProfile?.vehicle_plate || 'Không có');
+                    body = body.replace(/\[created_time\]/g, trip.created_at.toLocaleString());
+                    body = body.replace(/\[arrival_time\]/g, trip.arrival_time?.toLocaleString() || 'Không có');
+                }
+
                 this.socketGateway.sendToUser(trip.partner.id, 'partner:trip_confirmed', {
                     trip_id: trip.trip_id,
                     actual_guest_count: actual_guest_count,
                     reward_amount: rewardAmount
                 }, {
                     title: 'Chuyến đi hoàn thành',
-                    body: `Chuyến đi đã hoàn tất! Bạn nhận được ${rewardAmount} Goxu`
+                    body: body
                 });
             }
 
@@ -171,20 +184,26 @@ export class CustomerService {
 
         await this.tripRepo.save(trip);
 
-        // Notify Driver
-        // Need to reload to ensure partner is there if not loaded (though ideally should load in first findOne)
         const fullTrip = await this.tripRepo.findOne({
             where: { trip_id: tripId },
             relations: ['partner']
         });
 
         if (fullTrip && fullTrip.partner) {
+            const settings = await this.settingsService.getSettings();
+            let body = `Khách hàng đã từ chối chuyến đi. Lý do: ${reason || 'Không có lý do'}`;
+
+            if (settings?.tpl_trip_rejected) {
+                body = settings.tpl_trip_rejected;
+                body = body.replace(/\[reason\]/g, reason || 'Không có lý do');
+            }
+
             this.socketGateway.sendToUser(fullTrip.partner.id, 'partner:trip_rejected', {
                 trip_id: trip.trip_id,
                 reason: reason || 'Khách hàng đã từ chối'
             }, {
                 title: 'Chuyến đi bị từ chối',
-                body: `Khách hàng đã từ chối chuyến đi. Lý do: ${reason || 'Không có lý do'}`
+                body: body
             });
         }
 

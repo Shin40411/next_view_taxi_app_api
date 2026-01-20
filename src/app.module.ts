@@ -14,6 +14,7 @@ import { Notification } from './entities/notification.entity';
 import { Contract } from './entities/contract.entity';
 import { WalletTransaction } from './entities/wallet-transaction.entity';
 import { Setting } from './entities/setting.entity';
+import { PushNotificationSetting } from './entities/push-notification-setting.entity';
 import { Faq } from './entities/faq.entity';
 
 import { TripsController } from './modules/controller/trips/trips.controller';
@@ -38,11 +39,13 @@ import { SupportModule } from './modules/module/support.module';
 import { SupportTicket } from './entities/support-ticket.entity';
 import { CompanyBankAccount } from './entities/company-bank-account.entity';
 import { CompanyBankAccountModule } from './modules/module/company-bank-account.module';
+import { MailModule } from './modules/module/mail.module';
 
 import { VietmapService } from './utils/vietmap.service';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { EncryptInterceptor } from './common/interceptors/encrypt.interceptor';
 import { DecryptMiddleware } from './common/middlewares/decrypt.middleware';
+import { SafeThrottlerGuard } from './common/guards/safe-throttler.guard';
 import { SeedController } from './modules/controller/seed/seed.controller';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TasksModule } from './modules/module/tasks.module';
@@ -63,7 +66,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
       password: process.env.DB_PASSWORD!,
       database: process.env.DB_NAME || 'taxi_app_db',
 
-      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Notification, Contract, WalletTransaction, Setting, SupportTicket, Faq, CompanyBankAccount],
+      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Notification, Contract, WalletTransaction, Setting, SupportTicket, Faq, CompanyBankAccount, PushNotificationSetting],
       synchronize: true,
       legacySpatialSupport: false,
     }),
@@ -81,6 +84,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
       ttl: 60000,
       limit: 60,
     }]),
+    MailModule,
   ],
   controllers: [SeedController, TripsController, AdminController, SystemAdminController, PartnerController, CustomerController, ContractController, WalletController],
   providers: [
@@ -94,6 +98,10 @@ import { ThrottlerModule } from '@nestjs/throttler';
     {
       provide: APP_INTERCEPTOR,
       useClass: EncryptInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: SafeThrottlerGuard,
     },
   ],
 })

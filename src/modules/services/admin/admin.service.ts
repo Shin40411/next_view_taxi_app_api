@@ -18,6 +18,7 @@ import { Contract } from 'src/entities/contract.entity';
 import { SupportTicket } from 'src/entities/support-ticket.entity';
 import { WalletTransaction } from 'src/entities/wallet-transaction.entity';
 import { PointTransaction } from 'src/entities/point-transaction.entity';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AdminService {
@@ -33,6 +34,7 @@ export class AdminService {
         @InjectRepository(WalletTransaction) private walletTxRepo: Repository<WalletTransaction>,
         @InjectRepository(PointTransaction) private pointTxRepo: Repository<PointTransaction>,
         private socketGateway: SocketGateway,
+        private mailService: MailService,
     ) { }
 
     async getUsers(role: UserRole | undefined, page: number = 1, limit: number = 10, search?: string, province?: string) {
@@ -181,6 +183,10 @@ export class AdminService {
                 account_holder_name: dto.account_holder_name || '',
             });
             await this.bankRepo.save(bankAccount);
+        }
+
+        if (dto.role === UserRole.CUSTOMER && dto.send_notification && dto.email) {
+            this.mailService.sendServicePointAccountCreated(dto.email, savedUser.username, dto.password);
         }
 
         return { message: 'Tạo tài khoản thành công', userId: savedUser.id };
@@ -631,7 +637,6 @@ export class AdminService {
             totalPages: Math.ceil(total / limit),
         };
     }
-
 
     async createAdminUser(dto: CreateAdminDto) {
         const existingUser = await this.userRepo.findOne({

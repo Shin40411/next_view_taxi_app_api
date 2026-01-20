@@ -185,4 +185,96 @@ export class MailService {
             this.logger.error(`Failed to send profile reminder email to ${to}`, error.stack);
         }
     }
+
+    async sendSupportTicketNotification(to: string, userName: string, ticketSubject: string, ticketContent: string) {
+        const settings = await this.settingsService.getSettings();
+
+        if (!settings?.mail_host || !settings?.mail_user || !settings?.mail_pass) {
+            this.logger.warn('Mail configuration is missing. Skipping support ticket notification.');
+            return;
+        }
+
+        const transporter = nodemailer.createTransport({
+            host: settings.mail_host,
+            port: settings.mail_port || 587,
+            secure: settings.mail_port === 465,
+            auth: {
+                user: settings.mail_user,
+                pass: settings.mail_pass,
+            },
+        });
+
+        const mailOptions = {
+            from: settings.mail_from || '"Goxu.vn" <no-reply@goxu.vn>',
+            to: to,
+            subject: `[Hỗ trợ] Yêu cầu mới từ ${userName}: ${ticketSubject}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Yêu cầu hỗ trợ mới</h2>
+                    <p><strong>Người gửi:</strong> ${userName}</p>
+                    <p><strong>Tiêu đề:</strong> ${ticketSubject}</p>
+                    <p><strong>Nội dung:</strong></p>
+                    <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #FFC107;">
+                        ${ticketContent}
+                    </div>
+                    <br>
+                    <p>Vui lòng đăng nhập vào trang quản trị để phản hồi.</p>
+                </div>
+            `,
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            this.logger.log(`Support ticket notification sent to: ${to}`);
+        } catch (error) {
+            this.logger.error(`Failed to send support notification to ${to}`, error.stack);
+        }
+    }
+
+    async sendServicePointAccountCreated(to: string, userName: string, pass: string) {
+        const settings = await this.settingsService.getSettings();
+
+        if (!settings?.mail_host || !settings?.mail_user || !settings?.mail_pass) {
+            this.logger.warn('Mail configuration is missing. Skipping service point account created email.');
+            return;
+        }
+
+        const transporter = nodemailer.createTransport({
+            host: settings.mail_host,
+            port: settings.mail_port || 587,
+            secure: settings.mail_port === 465,
+            auth: {
+                user: settings.mail_user,
+                pass: settings.mail_pass,
+            },
+        });
+
+        const mailOptions = {
+            from: settings.mail_from || '"Goxu.vn" <no-reply@goxu.vn>',
+            to: to,
+            subject: 'Thông báo tạo tài khoản thành công - Goxu.vn',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Xin chào Quý công ty,</h2>
+                    <p>Tài khoản của bạn đã được tạo thành công trên hệ thống <strong>Goxu.vn</strong>.</p>
+                    <div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin: 20px 0;">
+                        <p><strong>Thông tin đăng nhập:</strong></p>
+                        <p>Tên đăng nhập: <strong>${userName}</strong></p>
+                        <p>Mật khẩu: <strong>${pass}</strong></p>
+                    </div>
+                    <p style="color: #d32f2f;"><strong>Vui lòng đăng nhập vào <a href="https://goxu.vn/">tài khoản của bạn</a> và đổi lại mật khẩu mới ngay sau khi đăng nhập.</strong></p>
+                    <br>
+                    <p>Trân trọng,</p>
+                    <p>Đội ngũ Goxu.vn</p>
+                </div>
+            `,
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            this.logger.log(`Service point account created email sent to: ${to}`);
+        } catch (error) {
+            this.logger.error(`Failed to send service point account created email to ${to}`, error.stack);
+        }
+    }
 }
