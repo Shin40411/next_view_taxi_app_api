@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength, IsNumber } from 'class-validator';
+import { IsOptional, IsString, MaxLength, IsNumber, IsBoolean } from 'class-validator';
 
 export class UpdateSettingsDto {
     @IsOptional()
@@ -71,6 +71,26 @@ export class UpdateSettingsDto {
     email_receive?: string;
 
     @IsOptional()
+    @IsBoolean()
+    send_report_mail?: boolean;
+
+    @IsOptional()
+    @IsString()
+    time_report_mail?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    send_reminder_mail?: boolean;
+
+    @IsOptional()
+    @IsString()
+    time_reminder_mail?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    receive_support_mail?: boolean;
+
+    @IsOptional()
     @IsString()
     tpl_trip_request?: string;
 
@@ -97,8 +117,6 @@ export class UpdateSettingsDto {
     @IsOptional()
     @IsString()
     tpl_wallet_failed?: string;
-
-
 
     @IsOptional()
     @IsString()

@@ -34,12 +34,10 @@ export class SupportService {
             content: dto.content,
         });
 
-
-
         await this.ticketRepo.save(ticket);
 
         const settings = await this.settingsService.getSettings();
-        if (settings?.email_receive) {
+        if (settings?.receive_support_mail && settings?.email_receive) {
             await this.mailService.sendSupportTicketNotification(
                 settings.email_receive,
                 user.full_name,
@@ -60,7 +58,6 @@ export class SupportService {
             query.andWhere('ticket.created_at >= :fromDate', { fromDate });
         }
         if (toDate) {
-            // Ensure toDate includes the entire day
             const endOfDay = new Date(toDate);
             endOfDay.setHours(23, 59, 59, 999);
             query.andWhere('ticket.created_at <= :toDate', { toDate: endOfDay });

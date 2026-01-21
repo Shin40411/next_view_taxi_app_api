@@ -20,8 +20,7 @@ import { Faq } from './entities/faq.entity';
 import { TripsController } from './modules/controller/trips/trips.controller';
 import { TripsService } from './modules/services/trips/trips.service';
 import { AdminController } from './modules/controller/admin/admin.controller';
-import { SystemAdminController } from './modules/controller/admin/system-admin.controller';
-import { AdminService } from './modules/services/admin/admin.service';
+import { AdminModule } from './modules/module/admin.module';
 import { PartnerController } from './modules/controller/partners/partner.controller';
 import { PartnerService } from './modules/services/partners/partner.service';
 import { CustomerController } from './modules/controller/customers/customer.controller';
@@ -66,12 +65,41 @@ import { ThrottlerModule } from '@nestjs/throttler';
       password: process.env.DB_PASSWORD!,
       database: process.env.DB_NAME || 'taxi_app_db',
 
-      entities: [User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Notification, Contract, WalletTransaction, Setting, SupportTicket, Faq, CompanyBankAccount, PushNotificationSetting],
+      entities: [
+        User,
+        PartnerProfile,
+        ServicePoint,
+        Trip,
+        PointTransaction,
+        BankAccount,
+        Notification,
+        Contract,
+        WalletTransaction,
+        Setting,
+        SupportTicket,
+        Faq,
+        CompanyBankAccount,
+        PushNotificationSetting
+      ],
       synchronize: true,
       legacySpatialSupport: false,
     }),
 
-    TypeOrmModule.forFeature([User, PartnerProfile, ServicePoint, Trip, PointTransaction, BankAccount, Contract, WalletTransaction, Notification, SupportTicket]),
+    TypeOrmModule.forFeature([
+      User,
+      PartnerProfile,
+      ServicePoint,
+      Trip,
+      PointTransaction,
+      BankAccount,
+      Contract,
+      WalletTransaction,
+      Notification,
+      SupportTicket,
+      Faq,
+      CompanyBankAccount,
+      PushNotificationSetting
+    ]),
     AuthModule,
     SocketModule,
     NotificationModule,
@@ -85,11 +113,19 @@ import { ThrottlerModule } from '@nestjs/throttler';
       limit: 60,
     }]),
     MailModule,
+    AdminModule,
   ],
-  controllers: [SeedController, TripsController, AdminController, SystemAdminController, PartnerController, CustomerController, ContractController, WalletController],
+  controllers: [
+    SeedController,
+    TripsController,
+    AdminController,
+    PartnerController,
+    CustomerController,
+    ContractController,
+    WalletController
+  ],
   providers: [
     TripsService,
-    AdminService,
     PartnerService,
     CustomerService,
     VietmapService,

@@ -277,4 +277,103 @@ export class MailService {
             this.logger.error(`Failed to send service point account created email to ${to}`, error.stack);
         }
     }
+
+    async sendReportEmail(attachments: { filename: string, content: Buffer }[]) {
+        const settings = await this.settingsService.getSettings();
+
+        if (!settings?.mail_host || !settings?.mail_user || !settings?.mail_pass) {
+            this.logger.warn('Mail configuration is missing. Skipping report email.');
+            return;
+        }
+
+        const to = settings.email_receive;
+        if (!to) {
+            this.logger.warn('Receiver email (email_receive) is not configured. Skipping report email.');
+            return;
+        }
+
+        const transporter = nodemailer.createTransport({
+            host: settings.mail_host,
+            port: settings.mail_port || 587,
+            secure: settings.mail_port === 465,
+            auth: {
+                user: settings.mail_user,
+                pass: settings.mail_pass,
+            },
+        });
+
+        const mailOptions = {
+            from: settings.mail_from || '"Goxu.vn" <no-reply@goxu.vn>',
+            to: to,
+            subject: `Báo cáo Thống kê Tự động - Goxu.vn`,
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Báo cáo Thống kê Định kỳ</h2>
+                    <p>Chào bạn</p>
+                    <p>Hệ thống tự động gửi báo cáo thống kê cho giai đoạn vừa qua.</p>
+                    <p>Vui lòng kiểm tra file đính kèm.</p>
+                    <br>
+                    <p>Trân trọng,</p>
+                    <p>Hệ thống Goxu.vn</p>
+                </div>
+            `,
+            attachments: attachments,
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            this.logger.log(`Report email sent to: ${to}`);
+        } catch (error) {
+            this.logger.error(`Failed to send report email to ${to}`, error.stack);
+        }
+    }
+
+    async sendExpiredContract(to: string, customerName: string, expireDate: Date) {
+        const settings = await this.settingsService.getSettings();
+
+        if (!settings?.mail_host || !settings?.mail_user || !settings?.mail_pass) {
+            this.logger.warn('Mail configuration is missing. Skipping expired contract email.');
+            return;
+        }
+
+        const transporter = nodemailer.createTransport({
+            host: settings.mail_host,
+            port: settings.mail_port || 587,
+            secure: settings.mail_port === 465,
+            auth: {
+                user: settings.mail_user,
+                pass: settings.mail_pass,
+            },
+        });
+
+        const formattedDate = new Date(expireDate).toLocaleDateString('vi-VN');
+
+        const mailOptions = {
+            from: settings.mail_from || '"Goxu.vn" <no-reply@goxu.vn>',
+            to: to,
+            subject: 'Thông báo hết hạn hợp đồng - Goxu.vn',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Thông báo hết hạn hợp đồng</h2>
+                    <p>Xin chào <strong>${customerName}</strong>,</p>
+                    <p>Chúng tôi xin thông báo hợp đồng của bạn tại <strong>Goxu.vn</strong> đã hết hạn vào ngày <strong>${formattedDate}</strong>.</p>
+                    <p>Vui lòng liên hệ với bộ phận hỗ trợ hoặc truy cập vào hệ thống để thực hiện gia hạn hợp đồng và tiếp tục sử dụng ví Goxu.</p>
+                    <br>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="https://goxu.vn/" style="background-color: #FFC107; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Đăng nhập để Gia hạn</a>
+                    </div>
+                    <br>
+                    <p>Trân trọng,</p>
+                    <p>Đội ngũ Goxu.vn</p>
+                </div>
+            `,
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            this.logger.log(`Expired contract email sent to: ${to}`);
+        } catch (error) {
+            this.logger.error(`Failed to send expired contract email to ${to}`, error.stack);
+        }
+    }
 }

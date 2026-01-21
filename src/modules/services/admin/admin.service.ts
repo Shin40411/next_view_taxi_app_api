@@ -249,12 +249,9 @@ export class AdminService {
             if (dto.date_of_birth) profileUpdates.date_of_birth = dto.date_of_birth;
             if (dto.sex) profileUpdates.sex = dto.sex;
 
-            // if (Object.keys(profileUpdates).length > 0) {
-            //     if (profileUpdates.status !== PartnerStatus.PENDING) {
-            //         profileUpdates.status = PartnerStatus.PENDING;
-            //     }
-            //     await this.profileRepo.update(profile.id, profileUpdates);
-            // }
+            if (Object.keys(profileUpdates).length > 0) {
+                await this.profileRepo.update(user.partnerProfile.id, profileUpdates);
+            }
         }
 
         if (user.role === UserRole.CUSTOMER && user.servicePoints && user.servicePoints.length > 0) {

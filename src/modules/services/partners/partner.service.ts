@@ -8,6 +8,7 @@ import { Repository, Between, DataSource, Brackets } from 'typeorm';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
 import { SearchServicePointDto } from '../../dtos/search-service-point.dto';
 import { SettingsService } from '../settings/settings.service';
+import { generateTripCode } from 'src/utils/generate-code';
 
 @Injectable()
 export class PartnerService {
@@ -144,6 +145,7 @@ export class PartnerService {
             current_location: p.current_location
         }));
     }
+
     async createTripRequest(partnerId: string, servicePointId: string, guestCount: number) {
         const pendingTrip = await this.tripRepo.findOne({
             where: {
@@ -163,6 +165,7 @@ export class PartnerService {
             partner: { id: partnerId },
             servicePoint: { id: servicePointId },
             guest_count: guestCount,
+            trip_code: generateTripCode(servicePoint.name || 'Unknown'),
             reward_snapshot: Math.floor(((Number(servicePoint.reward_amount) || 0) * (100 - (Number(servicePoint.discount) || 0))) / 100) * guestCount,
             status: TripStatus.PENDING_CONFIRMATION,
         });
@@ -183,6 +186,7 @@ export class PartnerService {
             if (settings?.tpl_trip_request) {
                 body = settings.tpl_trip_request;
                 body = body.replace(/\[partner_name\]/g, partner?.user.full_name || 'Tài xế');
+                body = body.replace(/\[trip_code\]/g, newTrip.trip_code || 'Không có');
                 body = body.replace(/\[guest_count\]/g, guestCount.toString());
                 body = body.replace(/\[vehicle_plate\]/g, partner?.vehicle_plate || 'Không có');
                 body = body.replace(/\[created_time\]/g, new Date().toLocaleString() || 'Không có');
@@ -190,6 +194,7 @@ export class PartnerService {
 
             this.socketGateway.sendToUser(spWithOwner.owner.id, 'customer:new_trip_request', {
                 trip_id: newTrip.trip_id,
+                trip_code: newTrip.trip_code,
                 guest_count: guestCount,
                 partner: {
                     id: partnerId,
@@ -202,8 +207,10 @@ export class PartnerService {
             });
         }
 
-        return { message: 'Yêu cầu của bạn đã được gửi đi', trip_id: newTrip.trip_id };
+        return { message: 'Yêu cầu của bạn đã được gửi đi', trip_id: newTrip.trip_id, trip_code: newTrip.trip_code };
     }
+
+
 
     async confirmArrival(partnerId: string, tripId: string) {
         const trip = await this.tripRepo.findOne({
@@ -238,6 +245,7 @@ export class PartnerService {
             if (settings?.tpl_driver_arrived) {
                 body = settings.tpl_driver_arrived;
                 body = body.replace(/\[partner_name\]/g, partner?.user.full_name || 'Tài xế');
+                body = body.replace(/\[trip_code\]/g, trip.trip_code || 'Không có');
                 body = body.replace(/\[guest_count\]/g, trip.guest_count.toString());
                 body = body.replace(/\[vehicle_plate\]/g, partner?.vehicle_plate || 'Không có');
                 body = body.replace(/\[arrival_time\]/g, trip.arrival_time?.toLocaleString() || 'Không có');
@@ -245,6 +253,7 @@ export class PartnerService {
 
             this.socketGateway.sendToUser(fullTrip.servicePoint.owner.id, 'customer:driver_arrived', {
                 trip_id: trip.trip_id,
+                trip_code: trip.trip_code,
                 arrival_time: trip.arrival_time,
                 partner: {
                     id: partnerId,
@@ -291,6 +300,7 @@ export class PartnerService {
             if (settings?.tpl_trip_cancelled) {
                 body = settings.tpl_trip_cancelled;
                 body = body.replace(/\[partner_name\]/g, partner?.user.full_name || 'Tài xế');
+                body = body.replace(/\[trip_code\]/g, trip.trip_code || 'Không có');
                 body = body.replace(/\[guest_count\]/g, trip.guest_count.toString());
                 body = body.replace(/\[reason\]/g, reason || 'Không có lý do');
                 body = body.replace(/\[created_time\]/g, trip.created_at.toLocaleString());
@@ -298,6 +308,7 @@ export class PartnerService {
 
             this.socketGateway.sendToUser(fullTrip.servicePoint.owner.id, 'customer:trip_cancelled', {
                 trip_id: trip.trip_id,
+                trip_code: trip.trip_code,
                 reason: reason || 'Tài xế đã huỷ chuyến'
             }, {
                 title: 'Chuyến đi bị huỷ',
@@ -347,6 +358,7 @@ export class PartnerService {
             reward_goxu: Number(trip.reward_snapshot),
             created_at: trip.created_at,
             arrival_time: trip.arrival_time,
+            trip_code: trip.trip_code,
         }));
 
         return {

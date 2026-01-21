@@ -142,6 +142,7 @@ export class CustomerService {
                 if (settings?.tpl_trip_confirmed) {
                     body = settings.tpl_trip_confirmed;
                     body = body.replace(/\[service_name\]/g, trip.servicePoint.name || 'Không có');
+                    body = body.replace(/\[trip_code\]/g, trip.trip_code || 'Không có');
                     body = body.replace(/\[partner_name\]/g, trip.partner.full_name || 'Tài xế');
                     body = body.replace(/\[guest_count\]/g, actual_guest_count.toString());
                     body = body.replace(/\[vehicle_plate\]/g, driverProfile?.vehicle_plate || 'Không có');
@@ -151,6 +152,7 @@ export class CustomerService {
 
                 this.socketGateway.sendToUser(trip.partner.id, 'partner:trip_confirmed', {
                     trip_id: trip.trip_id,
+                    trip_code: trip.trip_code,
                     actual_guest_count: actual_guest_count,
                     reward_amount: rewardAmount
                 }, {
@@ -195,11 +197,13 @@ export class CustomerService {
 
             if (settings?.tpl_trip_rejected) {
                 body = settings.tpl_trip_rejected;
+                body = body.replace(/\[trip_code\]/g, trip.trip_code || 'Không có');
                 body = body.replace(/\[reason\]/g, reason || 'Không có lý do');
             }
 
             this.socketGateway.sendToUser(fullTrip.partner.id, 'partner:trip_rejected', {
                 trip_id: trip.trip_id,
+                trip_code: trip.trip_code,
                 reason: reason || 'Khách hàng đã từ chối'
             }, {
                 title: 'Chuyến đi bị từ chối',

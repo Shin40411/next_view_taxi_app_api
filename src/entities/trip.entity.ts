@@ -8,6 +8,9 @@ export class Trip {
     @PrimaryGeneratedColumn('uuid')
     trip_id: string;
 
+    @Column({ type: 'varchar', length: 50, unique: true })
+    trip_code: string;
+
     @ManyToOne(() => User)
     @JoinColumn({ name: 'partner_id' })
     partner: User;

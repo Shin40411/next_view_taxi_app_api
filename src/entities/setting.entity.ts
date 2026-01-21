@@ -49,4 +49,19 @@ export class Setting {
 
     @Column({ nullable: true })
     email_receive: string;
+
+    @Column({ default: false })
+    send_report_mail: boolean;
+
+    @Column({ nullable: true })
+    time_report_mail: string;
+
+    @Column({ default: false })
+    send_reminder_mail: boolean;
+
+    @Column({ nullable: true })
+    time_reminder_mail: string;
+
+    @Column({ default: false })
+    receive_support_mail: boolean;
 }
