@@ -8,6 +8,7 @@ import { WalletService } from 'src/modules/services/wallet/wallet.service';
 import { CreateDepositDto, CreateTransferDto } from 'src/modules/dtos/wallet.dto';
 import { Throttle } from '@nestjs/throttler';
 import { SafeThrottlerGuard } from 'src/common/guards/safe-throttler.guard';
+import { TipDriverDto } from 'src/modules/dtos/tip-driver.dto';
 
 @Controller('customer')
 @UseGuards(AuthGuard, SafeThrottlerGuard)
@@ -46,33 +47,75 @@ export class CustomerController {
     }
 
     @Get('pending-requests')
-    async getPendingRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
-        return this.customerService.getPendingTrips(req.user.sub, Number(page), Number(limit));
+    async getPendingRequests(
+        @Request() req,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 5,
+        @Query('search') search?: string,
+        @Query('fromDate') fromDate?: string,
+        @Query('toDate') toDate?: string
+    ) {
+        return this.customerService.getPendingTrips(req.user.sub, Number(page), Number(limit), search, fromDate, toDate);
     }
 
     @Get('arrived-requests')
-    async getArrivedRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
-        return this.customerService.getArrivedTrips(req.user.sub, Number(page), Number(limit));
+    async getArrivedRequests(
+        @Request() req,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 5,
+        @Query('search') search?: string,
+        @Query('fromDate') fromDate?: string,
+        @Query('toDate') toDate?: string
+    ) {
+        return this.customerService.getArrivedTrips(req.user.sub, Number(page), Number(limit), search, fromDate, toDate);
     }
 
     @Get('completed-requests')
-    async getCompletedRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
-        return this.customerService.getCompletedTrips(req.user.sub, Number(page), Number(limit));
+    async getCompletedRequests(
+        @Request() req,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 5,
+        @Query('search') search?: string,
+        @Query('fromDate') fromDate?: string,
+        @Query('toDate') toDate?: string
+    ) {
+        return this.customerService.getCompletedTrips(req.user.sub, Number(page), Number(limit), search, fromDate, toDate);
     }
 
     @Get('rejected-requests')
-    async getRejectedRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
-        return this.customerService.getRejectedTrips(req.user.sub, Number(page), Number(limit));
+    async getRejectedRequests(
+        @Request() req,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 5,
+        @Query('search') search?: string,
+        @Query('fromDate') fromDate?: string,
+        @Query('toDate') toDate?: string
+    ) {
+        return this.customerService.getRejectedTrips(req.user.sub, Number(page), Number(limit), search, fromDate, toDate);
     }
 
     @Get('cancelled-requests')
-    async getCancelledRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
-        return this.customerService.getCancelledTrips(req.user.sub, Number(page), Number(limit));
+    async getCancelledRequests(
+        @Request() req,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 5,
+        @Query('search') search?: string,
+        @Query('fromDate') fromDate?: string,
+        @Query('toDate') toDate?: string
+    ) {
+        return this.customerService.getCancelledTrips(req.user.sub, Number(page), Number(limit), search, fromDate, toDate);
     }
 
     @Get('all-requests')
-    async getAllRequests(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 5) {
-        return this.customerService.getAllTrips(req.user.sub, Number(page), Number(limit));
+    async getAllRequests(
+        @Request() req,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 5,
+        @Query('search') search?: string,
+        @Query('fromDate') fromDate?: string,
+        @Query('toDate') toDate?: string
+    ) {
+        return this.customerService.getAllTrips(req.user.sub, Number(page), Number(limit), search, fromDate, toDate);
     }
 
     @Post('confirm-request/:tripId')
@@ -89,6 +132,7 @@ export class CustomerController {
     ) {
         return this.customerService.rejectTrip(req.user.sub, tripId, actualGuestCount, reason);
     }
+
     @Get('stats/budget')
     @UseGuards(AuthGuard)
     async getBudgetStats(@Request() req, @Query('range') range: string) {
@@ -98,5 +142,14 @@ export class CustomerController {
     @Get('active-drivers')
     async getActiveDrivers() {
         return this.customerService.getActiveDrivers();
+    }
+
+    @Post('tip/:tripId')
+    async tipDriver(
+        @Request() req,
+        @Param('tripId') tripId: string,
+        @Body() body: TipDriverDto
+    ) {
+        return this.customerService.tipDriver(req.user.sub, tripId, Number(body.amount));
     }
 }

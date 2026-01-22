@@ -395,7 +395,7 @@ export class AdminService {
         const query = this.tripRepo.createQueryBuilder('trip')
             .leftJoinAndSelect('trip.partner', 'partner')
             .leftJoinAndSelect('partner.bankAccount', 'bankAccount')
-            .where('trip.status NOT IN (:...statuses)', { statuses: [TripStatus.PENDING_CONFIRMATION, TripStatus.REJECTED] })
+            .where('trip.status = :status', { status: TripStatus.COMPLETED })
             .select([
                 'partner.id',
                 'partner.full_name',
@@ -485,6 +485,7 @@ export class AdminService {
             .leftJoinAndSelect('trip.servicePoint', 'servicePoint')
             .leftJoinAndSelect('servicePoint.owner', 'owner')
             .leftJoinAndSelect('owner.bankAccount', 'bankAccount')
+            .where('trip.status = :status', { status: TripStatus.COMPLETED })
             .select([
                 'servicePoint.id',
                 'servicePoint.name',
@@ -493,7 +494,7 @@ export class AdminService {
                 'bankAccount.account_holder_name',
                 'COUNT(trip.trip_id) as totalTrips',
                 'SUM(trip.actual_guest_count) as totalGuests',
-                `SUM(CASE WHEN trip.status != '${TripStatus.REJECTED}' THEN trip.reward_snapshot ELSE 0 END) as totalPoints`
+                'SUM(trip.reward_snapshot) as totalPoints'
             ])
             .groupBy('servicePoint.id')
             .addGroupBy('servicePoint.name')
@@ -683,5 +684,65 @@ export class AdminService {
         const saved = await this.userRepo.save(user);
         const { password_hash, ...rest } = saved;
         return rest;
+    }
+
+    async getServicePointTransactions(servicePointId: string, range: string, page: number = 1, limit: number = 10) {
+        const query = this.pointTxRepo.createQueryBuilder('tx')
+            .leftJoinAndSelect('tx.trip', 'trip')
+            .where('tx.servicePoint = :servicePointId', { servicePointId })
+            .orderBy('tx.created_at', 'DESC');
+
+        const now = new Date();
+        let startDate: Date | undefined;
+        let endDate: Date | undefined;
+
+        switch (range) {
+            case 'today':
+                startDate = new Date(now.setHours(0, 0, 0, 0));
+                endDate = new Date(now.setHours(23, 59, 59, 999));
+                break;
+            case 'yesterday':
+                const yesterday = new Date(now);
+                yesterday.setDate(now.getDate() - 1);
+                startDate = new Date(yesterday.setHours(0, 0, 0, 0));
+                endDate = new Date(yesterday.setHours(23, 59, 59, 999));
+                break;
+            case '7_last_days':
+                const sevenDaysAgo = new Date(now);
+                sevenDaysAgo.setDate(now.getDate() - 7);
+                startDate = new Date(sevenDaysAgo.setHours(0, 0, 0, 0));
+                endDate = new Date();
+                break;
+            case 'this_month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                break;
+            default:
+                break;
+        }
+
+        if (startDate && endDate) {
+            query.andWhere('tx.created_at BETWEEN :startDate AND :endDate', { startDate, endDate });
+        }
+
+        const [data, total] = await query
+            .skip((page - 1) * limit)
+            .take(limit)
+            .getManyAndCount();
+
+        return {
+            data: data.map(tx => ({
+                id: tx.id,
+                amount: Number(tx.amount),
+                type: tx.type,
+                description: tx.description,
+                createdAt: tx.created_at,
+                tripCode: tx.trip?.trip_code
+            })),
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
     }
 }

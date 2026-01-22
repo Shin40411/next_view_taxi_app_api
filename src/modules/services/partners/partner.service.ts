@@ -210,8 +210,6 @@ export class PartnerService {
         return { message: 'Yêu cầu của bạn đã được gửi đi', trip_id: newTrip.trip_id, trip_code: newTrip.trip_code };
     }
 
-
-
     async confirmArrival(partnerId: string, tripId: string) {
         const trip = await this.tripRepo.findOne({
             where: {
@@ -342,7 +340,7 @@ export class PartnerService {
 
         const [trips, total] = await this.tripRepo.findAndCount({
             where: whereCondition,
-            relations: ['servicePoint'],
+            relations: ['servicePoint', 'servicePoint.owner'],
             order: { created_at: 'DESC' },
             skip: (page - 1) * limit,
             take: limit
@@ -352,6 +350,7 @@ export class PartnerService {
             id: trip.trip_id,
             service_point_name: trip.servicePoint.name,
             service_point_address: trip.servicePoint.address,
+            service_point_avatar: trip.servicePoint.owner?.avatar,
             guest_count: trip.guest_count,
             actual_guest_count: trip.actual_guest_count,
             status: trip.status,

@@ -212,6 +212,16 @@ export class AdminController {
         return this.adminService.getServicePointStats(range, Number(page) || 1, Number(limit) || 10);
     }
 
+    @Get('stats/service-points/:id/transactions')
+    async getServicePointTransactions(
+        @Param('id') id: string,
+        @Query('range') range: string,
+        @Query('page') page: number,
+        @Query('limit') limit: number
+    ) {
+        return this.adminService.getServicePointTransactions(id, range, Number(page) || 1, Number(limit) || 10);
+    }
+
     @Post('users/change-password')
     async changePassword(@Body() body: AdminChangePasswordDto) {
         return this.adminService.changeUserPassword(body.userId, body.newPassword);

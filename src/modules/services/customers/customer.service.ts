@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ServicePoint } from 'src/entities/service-point.entity';
 import { Trip } from 'src/entities/trip.entity';
 import { User } from 'src/entities/user.entity';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource, In, Like, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { PointTransaction } from 'src/entities/point-transaction.entity';
 import { TransactionType } from 'src/utils/point-transaction-enum';
 import { TripStatus } from 'src/utils/trips-status-enum';
@@ -26,7 +26,15 @@ export class CustomerService {
         private settingsService: SettingsService,
     ) { }
 
-    private async getPaginatedTrips(ownerId: string, status: TripStatus | 'ALL', page: number, limit: number) {
+    private async getPaginatedTrips(
+        ownerId: string,
+        status: TripStatus | 'ALL',
+        page: number,
+        limit: number,
+        search?: string,
+        fromDate?: string,
+        toDate?: string
+    ) {
         const myShops = await this.serviceRepo.find({ where: { owner: { id: ownerId } } });
         const shopIds = myShops.map(shop => shop.id);
 
@@ -43,6 +51,18 @@ export class CustomerService {
 
         if (status !== 'ALL') {
             whereCondition.status = status;
+        }
+
+        if (search) {
+            whereCondition.trip_code = Like(`%${search}%`);
+        }
+
+        if (fromDate && toDate) {
+            whereCondition.created_at = Between(new Date(fromDate), new Date(toDate));
+        } else if (fromDate) {
+            whereCondition.created_at = MoreThanOrEqual(new Date(fromDate));
+        } else if (toDate) {
+            whereCondition.created_at = LessThanOrEqual(new Date(toDate));
         }
 
         const [trips, total] = await this.tripRepo.findAndCount({
@@ -64,28 +84,28 @@ export class CustomerService {
         };
     }
 
-    async getAllTrips(ownerId: string, page: number = 1, limit: number = 5) {
-        return this.getPaginatedTrips(ownerId, 'ALL', page, limit);
+    async getAllTrips(ownerId: string, page: number = 1, limit: number = 5, search?: string, fromDate?: string, toDate?: string) {
+        return this.getPaginatedTrips(ownerId, 'ALL', page, limit, search, fromDate, toDate);
     }
 
-    async getArrivedTrips(ownerId: string, page: number = 1, limit: number = 5) {
-        return this.getPaginatedTrips(ownerId, TripStatus.ARRIVED, page, limit);
+    async getArrivedTrips(ownerId: string, page: number = 1, limit: number = 5, search?: string, fromDate?: string, toDate?: string) {
+        return this.getPaginatedTrips(ownerId, TripStatus.ARRIVED, page, limit, search, fromDate, toDate);
     }
 
-    async getCompletedTrips(ownerId: string, page: number = 1, limit: number = 5) {
-        return this.getPaginatedTrips(ownerId, TripStatus.COMPLETED, page, limit);
+    async getCompletedTrips(ownerId: string, page: number = 1, limit: number = 5, search?: string, fromDate?: string, toDate?: string) {
+        return this.getPaginatedTrips(ownerId, TripStatus.COMPLETED, page, limit, search, fromDate, toDate);
     }
 
-    async getPendingTrips(ownerId: string, page: number = 1, limit: number = 5) {
-        return this.getPaginatedTrips(ownerId, TripStatus.PENDING_CONFIRMATION, page, limit);
+    async getPendingTrips(ownerId: string, page: number = 1, limit: number = 5, search?: string, fromDate?: string, toDate?: string) {
+        return this.getPaginatedTrips(ownerId, TripStatus.PENDING_CONFIRMATION, page, limit, search, fromDate, toDate);
     }
 
-    async getRejectedTrips(ownerId: string, page: number = 1, limit: number = 5) {
-        return this.getPaginatedTrips(ownerId, TripStatus.REJECTED, page, limit);
+    async getRejectedTrips(ownerId: string, page: number = 1, limit: number = 5, search?: string, fromDate?: string, toDate?: string) {
+        return this.getPaginatedTrips(ownerId, TripStatus.REJECTED, page, limit, search, fromDate, toDate);
     }
 
-    async getCancelledTrips(ownerId: string, page: number = 1, limit: number = 5) {
-        return this.getPaginatedTrips(ownerId, TripStatus.CANCELLED, page, limit);
+    async getCancelledTrips(ownerId: string, page: number = 1, limit: number = 5, search?: string, fromDate?: string, toDate?: string) {
+        return this.getPaginatedTrips(ownerId, TripStatus.CANCELLED, page, limit, search, fromDate, toDate);
     }
 
     async confirmTrip(ownerId: string, tripId: string, actual_guest_count: number) {
@@ -118,7 +138,7 @@ export class CustomerService {
                 trip: trip,
                 amount: -rewardAmount,
                 type: TransactionType.TRIP_PAYMENT,
-                description: `Xác nhận đơn #${trip.trip_id}`,
+                description: `Xác nhận đơn #${trip.trip_code}`,
             });
             await queryRunner.manager.save(transaction);
 
@@ -265,5 +285,69 @@ export class CustomerService {
 
     async getActiveDrivers() {
         return this.partnerService.getActivePartners();
+    }
+
+    async tipDriver(ownerId: string, tripId: string, amount: number) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const trip = await queryRunner.manager.findOne(Trip, {
+                where: { trip_id: tripId },
+                relations: ['servicePoint', 'servicePoint.owner', 'partner', 'partner.partnerProfile']
+            });
+
+            if (!trip) throw new BadRequestException('Đơn không tồn tại');
+
+            if (trip.status !== TripStatus.COMPLETED) {
+                throw new BadRequestException('Đơn chưa hoàn thành hoặc không hợp lệ để tip');
+            }
+
+            if (trip.servicePoint.owner.id !== ownerId) throw new ForbiddenException('Bạn không sở hữu quán này');
+
+            const discount = trip.servicePoint.discount || 0;
+            const finalAmount = amount - (amount * discount / 100);
+
+            const shopBudget = Number(trip.servicePoint.advertising_budget);
+            trip.servicePoint.advertising_budget = shopBudget - finalAmount;
+            await queryRunner.manager.save(trip.servicePoint);
+
+            const transaction = queryRunner.manager.create(PointTransaction, {
+                servicePoint: trip.servicePoint,
+                trip: trip,
+                amount: -finalAmount,
+                type: TransactionType.TIPS,
+                description: `Thưởng hoa hồng thêm cho đơn #${trip.trip_code}`,
+            });
+            await queryRunner.manager.save(transaction);
+
+            if (trip.partner && trip.partner.partnerProfile) {
+                const driverProfile = trip.partner.partnerProfile;
+                const newBalance = Number(driverProfile.wallet_balance) + finalAmount;
+                await queryRunner.manager.update(PartnerProfile, driverProfile.id, { wallet_balance: newBalance });
+            }
+
+            await queryRunner.commitTransaction();
+
+            if (trip.partner) {
+                this.socketGateway.sendToUser(trip.partner.id, 'partner:received_tip', {
+                    trip_id: trip.trip_id,
+                    trip_code: trip.trip_code,
+                    amount: finalAmount
+                }, {
+                    title: 'Bạn nhận được hoa hồng thêm!',
+                    body: `Bạn vừa nhận được ${finalAmount} Goxu từ khách hàng thưởng cho chuyến với mã là #${trip.trip_code}`
+                });
+            }
+
+            return { message: 'Thưởng hoa hồng thêm thành công' };
+
+        } catch (err) {
+            await queryRunner.rollbackTransaction();
+            throw err;
+        } finally {
+            await queryRunner.release();
+        }
     }
 }

@@ -46,6 +46,7 @@ import { EncryptInterceptor } from './common/interceptors/encrypt.interceptor';
 import { DecryptMiddleware } from './common/middlewares/decrypt.middleware';
 import { SafeThrottlerGuard } from './common/guards/safe-throttler.guard';
 import { SeedController } from './modules/controller/seed/seed.controller';
+import { SeedModule } from './modules/module/seed.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TasksModule } from './modules/module/tasks.module';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -113,10 +114,11 @@ import { ThrottlerModule } from '@nestjs/throttler';
       limit: 60,
     }]),
     MailModule,
+    MailModule,
     AdminModule,
+    SeedModule,
   ],
   controllers: [
-    SeedController,
     TripsController,
     AdminController,
     PartnerController,
