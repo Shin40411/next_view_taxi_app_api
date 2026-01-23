@@ -283,8 +283,11 @@ export class CustomerService {
         };
     }
 
-    async getActiveDrivers() {
-        return this.partnerService.getActivePartners();
+    async getActiveDrivers(ownerId: string) {
+        const myShops = await this.serviceRepo.find({ where: { owner: { id: ownerId } } });
+        const shopIds = myShops.map(shop => shop.id);
+
+        return this.partnerService.getActivePartners(shopIds);
     }
 
     async tipDriver(ownerId: string, tripId: string, amount: number) {
@@ -349,5 +352,17 @@ export class CustomerService {
         } finally {
             await queryRunner.release();
         }
+    }
+
+
+    async getPreviousPartners(ownerId: string) {
+        return this.userRepo.createQueryBuilder('user')
+            .innerJoin('trips', 'trip', 'trip.partner_id = user.id')
+            .innerJoin('service_points', 'sp', 'trip.service_point_id = sp.id')
+            .leftJoinAndSelect('user.partnerProfile', 'profile')
+            .where('sp.owner_id = :ownerId', { ownerId })
+            .select(['user.id', 'user.full_name', 'user.avatar', 'user.username', 'profile.vehicle_plate', 'profile.current_location'])
+            .distinct(true)
+            .getMany();
     }
 }

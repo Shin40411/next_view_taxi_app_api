@@ -16,6 +16,9 @@ import { WalletTransaction } from './entities/wallet-transaction.entity';
 import { Setting } from './entities/setting.entity';
 import { PushNotificationSetting } from './entities/push-notification-setting.entity';
 import { Faq } from './entities/faq.entity';
+import { Conversation } from './entities/conversation.entity';
+import { Message } from './entities/message.entity';
+import { ChatParticipant } from './entities/chat-participant.entity';
 
 import { TripsController } from './modules/controller/trips/trips.controller';
 import { TripsService } from './modules/services/trips/trips.service';
@@ -49,6 +52,7 @@ import { SeedController } from './modules/controller/seed/seed.controller';
 import { SeedModule } from './modules/module/seed.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TasksModule } from './modules/module/tasks.module';
+import { ChatModule } from './modules/module/chat.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
@@ -80,7 +84,10 @@ import { ThrottlerModule } from '@nestjs/throttler';
         SupportTicket,
         Faq,
         CompanyBankAccount,
-        PushNotificationSetting
+        PushNotificationSetting,
+        Conversation,
+        Message,
+        ChatParticipant
       ],
       synchronize: true,
       legacySpatialSupport: false,
@@ -117,6 +124,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     MailModule,
     AdminModule,
     SeedModule,
+    ChatModule,
   ],
   controllers: [
     TripsController,

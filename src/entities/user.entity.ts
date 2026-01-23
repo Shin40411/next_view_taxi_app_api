@@ -6,6 +6,7 @@ import { BankAccount } from './bank-account.entity';
 import { Notification } from './notification.entity';
 import { Contract } from './contract.entity';
 import { SupportTicket } from './support-ticket.entity';
+import { ChatParticipant } from './chat-participant.entity';
 
 @Entity('users')
 export class User {
@@ -62,4 +63,7 @@ export class User {
 
     @OneToMany(() => SupportTicket, (ticket) => ticket.user)
     supportTickets: SupportTicket[];
+
+    @OneToMany(() => ChatParticipant, (participant) => participant.user)
+    chatParticipations: ChatParticipant[];
 }

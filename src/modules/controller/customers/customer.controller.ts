@@ -140,8 +140,13 @@ export class CustomerController {
     }
 
     @Get('active-drivers')
-    async getActiveDrivers() {
-        return this.customerService.getActiveDrivers();
+    async getActiveDrivers(@Request() req) {
+        return this.customerService.getActiveDrivers(req.user.sub);
+    }
+
+    @Get('previous-partners')
+    async getPreviousPartners(@Request() req) {
+        return this.customerService.getPreviousPartners(req.user.sub);
     }
 
     @Post('tip/:tripId')

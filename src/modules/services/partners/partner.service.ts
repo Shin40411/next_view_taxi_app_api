@@ -130,11 +130,17 @@ export class PartnerService {
         }));
     }
 
-    async getActivePartners() {
-        const partners = await this.profileRepo.find({
-            where: { is_online: true },
-            relations: ['user']
-        });
+    async getActivePartners(servicePointIds?: string[]) {
+        const query = this.profileRepo.createQueryBuilder('profile')
+            .leftJoinAndSelect('profile.user', 'user')
+            .where('profile.is_online = :isOnline', { isOnline: true });
+
+        if (servicePointIds && servicePointIds.length > 0) {
+            query.innerJoin('trips', 'trip', 'trip.partner_id = user.id')
+                .andWhere('trip.service_point_id IN (:...ids)', { ids: servicePointIds });
+        }
+
+        const partners = await query.getMany();
 
         return partners.map(p => ({
             id: p.user.id,
