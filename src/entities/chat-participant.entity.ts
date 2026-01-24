@@ -24,6 +24,12 @@ export class ChatParticipant {
     @Column({ nullable: true })
     last_read_at: Date;
 
+    @Column({ nullable: true })
+    deleted_at: Date;
+
+    @Column({ nullable: true })
+    messages_cleared_at: Date;
+
     @CreateDateColumn()
     joined_at: Date;
 }

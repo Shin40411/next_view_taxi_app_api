@@ -72,14 +72,16 @@ export class AuthController {
     }
 
     @Post('request-login-otp')
-    async requestLoginOtp(@Body() body: { username: string; password: string }) {
-        return this.authService.requestLoginOtp(body);
+    async requestLoginOtp(@Request() req, @Body() body: { username: string; password: string }) {
+        const userAgent = req.headers['user-agent'] || '';
+        return this.authService.requestLoginOtp(body, userAgent);
     }
 
     @Post('login')
-    @Throttle({ default: { limit: 5, ttl: 60000 } })
-    async login(@Body() body: LoginDto & { otp?: string }) {
-        return this.authService.login(body.username, body.password, body.otp);
+    @Throttle({ default: { limit: 30, ttl: 60000 } })
+    async login(@Request() req, @Body() body: LoginDto & { otp?: string }) {
+        const userAgent = req.headers['user-agent'] || '';
+        return this.authService.login(body.username, body.password, body.otp, userAgent);
     }
 
     @Post('logout')

@@ -63,7 +63,7 @@ export class SocketGateway
         }
     }
 
-    handleDisconnect(client: Socket) {
+    async handleDisconnect(client: Socket) {
         const user = client.data.user;
         if (user) {
             const userId = user.sub as string;
@@ -72,7 +72,7 @@ export class SocketGateway
 
             if (userSockets.length === 0) {
                 this.activeUsers.delete(userId);
-                this.authService.setPartnerStatus(userId, false);
+                await this.authService.setPartnerStatus(userId, false);
             } else {
                 this.activeUsers.set(userId, userSockets);
             }

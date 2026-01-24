@@ -144,7 +144,7 @@ export class AuthService {
         };
     }
 
-    async login(username: string, pass: string, otp?: string) {
+    async login(username: string, pass: string, otp?: string, userAgent?: string) {
         username = username.replace(/\s+/g, '');
         const users = await this.userRepo.find({
             where: [
@@ -166,7 +166,8 @@ export class AuthService {
 
         if (user.role !== UserRole.ADMIN && user.role !== UserRole.ACCOUNTANT && user.role !== UserRole.MONITOR) {
             if (!otp) {
-                const isTrusted = await this.redis.get(`trusted_device:${user.username}`);
+                const deviceKey = userAgent ? `trusted_device:${user.username}:${Buffer.from(userAgent).toString('base64').slice(0, 32)}` : `trusted_device:${user.username}`;
+                const isTrusted = await this.redis.get(deviceKey);
 
                 if (!isTrusted) {
                     throw new BadRequestException('Vui lòng nhập mã OTP để tiếp tục');
@@ -177,7 +178,8 @@ export class AuthService {
                     throw new BadRequestException('Mã OTP không chính xác hoặc đã hết hạn');
                 }
                 await this.redis.del(`login_otp:${user.username}`);
-                await this.redis.set(`trusted_device:${user.username}`, 'true', 'EX', 86400 * 30);
+                const deviceKey = userAgent ? `trusted_device:${user.username}:${Buffer.from(userAgent).toString('base64').slice(0, 32)}` : `trusted_device:${user.username}`;
+                await this.redis.set(deviceKey, 'true', 'EX', 86400 * 30);
             }
         }
 
@@ -214,7 +216,7 @@ export class AuthService {
         };
     }
 
-    async requestLoginOtp(body: { username: string; password: string }) {
+    async requestLoginOtp(body: { username: string; password: string }, userAgent?: string) {
         const { username, password } = body;
         const users = await this.userRepo.find({
             where: [
@@ -234,7 +236,8 @@ export class AuthService {
             return { message: 'Xác thực thành công', requireOtp: false };
         }
 
-        const isTrusted = await this.redis.get(`trusted_device:${user.username}`);
+        const deviceKey = userAgent ? `trusted_device:${user.username}:${Buffer.from(userAgent).toString('base64').slice(0, 32)}` : `trusted_device:${user.username}`;
+        const isTrusted = await this.redis.get(deviceKey);
         if (isTrusted) {
             return { message: 'Thiết bị đã được tin cậy', requireOtp: false };
         }
