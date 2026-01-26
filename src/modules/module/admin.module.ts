@@ -11,6 +11,9 @@ import { Contract } from '../../entities/contract.entity';
 import { SupportTicket } from '../../entities/support-ticket.entity';
 import { WalletTransaction } from '../../entities/wallet-transaction.entity';
 import { PointTransaction } from '../../entities/point-transaction.entity';
+import { ChatParticipant } from '../../entities/chat-participant.entity';
+import { Message } from '../../entities/message.entity';
+import { Conversation } from '../../entities/conversation.entity';
 import { SocketModule } from './socket.module';
 import { MailModule } from './mail.module';
 import { AdminController } from '../controller/admin/admin.controller';
@@ -32,7 +35,10 @@ import { ConfigModule } from '@nestjs/config';
             Contract,
             SupportTicket,
             WalletTransaction,
-            PointTransaction
+            PointTransaction,
+            ChatParticipant,
+            Message,
+            Conversation
         ]),
         SocketModule,
         MailModule,

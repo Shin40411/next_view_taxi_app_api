@@ -376,4 +376,94 @@ export class MailService {
             this.logger.error(`Failed to send expired contract email to ${to}`, error.stack);
         }
     }
+
+    async sendAccountInfoChangedEmail(
+        to: string,
+        customerName: string,
+        changes: { field: string; oldValue: string; newValue: string }[]
+    ) {
+        const settings = await this.settingsService.getSettings();
+
+        if (!settings?.mail_host || !settings?.mail_user || !settings?.mail_pass) {
+            this.logger.warn('Mail configuration is missing. Skipping account info changed email.');
+            return;
+        }
+
+        const transporter = nodemailer.createTransport({
+            host: settings.mail_host,
+            port: settings.mail_port || 587,
+            secure: settings.mail_port === 465,
+            auth: {
+                user: settings.mail_user,
+                pass: settings.mail_pass,
+            },
+        });
+
+        const changesHtml = changes.map(c => {
+            const fieldName = c.field === 'email' ? 'Email' : (c.field === 'phone_number' ? 'Số điện thoại' : c.field);
+            return `
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${fieldName}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${c.oldValue || 'Chưa có'}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${c.newValue}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const mailOptions = {
+            from: settings.mail_from || '"Goxu.vn" <no-reply@goxu.vn>',
+            to: to,
+            subject: 'Thông báo thay đổi thông tin tài khoản - Goxu.vn',
+            html: `
+                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; padding: 40px 0;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        
+                        <div style="background-color: #FFC107; padding: 20px; text-align: center;">
+                            <h1 style="color: #000; margin: 0; font-size: 20px;">Thông báo thay đổi thông tin</h1>
+                        </div>
+
+                        <div style="padding: 30px 40px; color: #555555; line-height: 1.6;">
+                            <h2 style="font-size: 18px; color: #333; margin-bottom: 20px;">Xin chào ${customerName},</h2>
+                            
+                            <p style="margin-bottom: 20px;">Thông tin tài khoản của bạn tại <strong>Goxu.vn</strong> đã được cập nhật bởi quản trị viên.</p>
+                            
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
+                                <thead>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Thông tin</th>
+                                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Giá trị cũ</th>
+                                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Giá trị mới</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${changesHtml}
+                                </tbody>
+                            </table>
+
+                            <p style="margin-bottom: 15px; color: #d32f2f;"><strong>Lưu ý:</strong> Nếu bạn không yêu cầu thay đổi này, vui lòng liên hệ ngay với bộ phận hỗ trợ.</p>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="https://goxu.vn/" style="background-color: #FFC107; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Đăng nhập tài khoản</a>
+                            </div>
+
+                            <p style="margin-bottom: 5px;"><strong>Cần hỗ trợ?</strong></p>
+                            <p style="margin-bottom: 0;">Hotline: <a href="tel:0763800763" style="color: #007bff; text-decoration: none;">0763.800.763</a></p>
+                        </div>
+
+                        <div style="background-color: #f9f9f9; padding: 20px 40px; text-align: center; font-size: 12px; color: #999999;">
+                            <p style="margin: 0;">&copy; ${new Date().getFullYear()} Goxu.vn. All rights reserved.</p>
+                        </div>
+
+                    </div>
+                </div>
+            `,
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            this.logger.log(`Account info changed email sent to: ${to}`);
+        } catch (error) {
+            this.logger.error(`Failed to send account info changed email to ${to}`, error.stack);
+        }
+    }
 }

@@ -228,6 +228,18 @@ export class ChatService {
     }
 
     async createMessage(conversationId: string, userId: string, createMessageDto: CreateMessageDto) {
+        const participants = await this.chatParticipantRepository.find({
+            where: { conversation_id: conversationId },
+            relations: ['user']
+        });
+
+        const otherParticipants = participants.filter(p => p.user_id !== userId);
+        const hasValidRecipient = otherParticipants.some(p => p.user !== null);
+
+        if (!hasValidRecipient) {
+            throw new Error('Không thể gửi tin nhắn. Người nhận không còn tồn tại.');
+        }
+
         const message = await this.messageRepository.save({
             body: createMessageDto.body,
             sender_id: userId,

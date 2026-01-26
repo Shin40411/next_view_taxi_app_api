@@ -149,6 +149,7 @@ export class AdminController {
         limits: { fileSize: 5 * 1024 * 1024 },
     }))
     async updateUser(
+        @Request() req,
         @Param('id') id: string,
         @Body() body: UpdateUserDto,
         @UploadedFiles() files: {
@@ -167,7 +168,7 @@ export class AdminController {
         if (files?.contract?.[0]) body.contract = files.contract[0].path;
         if (files?.avatar?.[0]) body.avatar = files.avatar[0].path;
 
-        return this.adminService.updateUser(id, body);
+        return this.adminService.updateUser(id, body, req.user);
     }
 
     @Delete('users/:id')

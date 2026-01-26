@@ -454,6 +454,8 @@ export class AuthService {
         const user = users.find(u => !u.isDelete) || users[0];
         if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
 
+        console.log(`[ForgotPassword] User found: ${user.id}, username: ${user.username}, email: ${user.email}, phone: ${user.phone_number}`);
+
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
         await this.redis.set(`reset_otp:${username}`, otp, 'EX', 300);
@@ -461,6 +463,7 @@ export class AuthService {
         const isEmail = username.includes('@');
 
         if (isEmail) {
+            console.log(`[ForgotPassword] Sending OTP to email (input): ${username}`);
             await this.mailService.sendOtp(username, otp, user.full_name);
         } else {
             const settings = await this.settingsService.getSettings();
@@ -468,6 +471,7 @@ export class AuthService {
 
             if (templateId) {
                 try {
+                    console.log(`[ForgotPassword] Sending Zalo ZNS to: ${username}`);
                     await this.zaloService.sendZns(username, templateId, {
                         otp: otp,
                         customer_name: user.full_name
@@ -478,7 +482,10 @@ export class AuthService {
             }
 
             if (user.email) {
+                console.log(`[ForgotPassword] Sending OTP to email (from DB): ${user.email}`);
                 await this.mailService.sendOtp(user.email, otp, user.full_name);
+            } else {
+                console.log(`[ForgotPassword] No email in DB for user: ${user.id}`);
             }
         }
 

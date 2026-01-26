@@ -9,7 +9,7 @@ import { Trip } from 'src/entities/trip.entity';
 import { User } from 'src/entities/user.entity';
 import { BankAccount } from 'src/entities/bank-account.entity';
 import { UserRole } from 'src/utils/user-role.enum';
-import { Repository, Not } from 'typeorm';
+import { Repository, Not, In } from 'typeorm';
 import { TripStatus } from 'src/utils/trips-status-enum';
 import { PartnerStatus } from 'src/utils/partner-status.enum';
 import { SocketGateway } from 'src/modules/socket/socket.gateway';
@@ -18,6 +18,9 @@ import { Contract } from 'src/entities/contract.entity';
 import { SupportTicket } from 'src/entities/support-ticket.entity';
 import { WalletTransaction } from 'src/entities/wallet-transaction.entity';
 import { PointTransaction } from 'src/entities/point-transaction.entity';
+import { ChatParticipant } from 'src/entities/chat-participant.entity';
+import { Message } from 'src/entities/message.entity';
+import { Conversation } from 'src/entities/conversation.entity';
 import { MailService } from '../mail/mail.service';
 
 @Injectable()
@@ -33,6 +36,9 @@ export class AdminService {
         @InjectRepository(SupportTicket) private ticketRepo: Repository<SupportTicket>,
         @InjectRepository(WalletTransaction) private walletTxRepo: Repository<WalletTransaction>,
         @InjectRepository(PointTransaction) private pointTxRepo: Repository<PointTransaction>,
+        @InjectRepository(ChatParticipant) private chatParticipantRepo: Repository<ChatParticipant>,
+        @InjectRepository(Message) private messageRepo: Repository<Message>,
+        @InjectRepository(Conversation) private conversationRepo: Repository<Conversation>,
         private socketGateway: SocketGateway,
         private mailService: MailService,
     ) { }
@@ -192,7 +198,7 @@ export class AdminService {
         return { message: 'Tạo tài khoản thành công', userId: savedUser.id };
     }
 
-    async updateUser(id: string, dto: UpdateUserDto) {
+    async updateUser(id: string, dto: UpdateUserDto, requestUser?: { sub: string; role: string }) {
         const user = await this.userRepo.findOne({
             where: { id, isDelete: false },
             relations: ['partnerProfile', 'servicePoints', 'bankAccount']
@@ -202,9 +208,34 @@ export class AdminService {
             throw new NotFoundException('Không tìm thấy tài khoản');
         }
 
+        const isSelfUpdate = requestUser && requestUser.sub === id;
+        const isRestrictedSelfUpdate = isSelfUpdate && [UserRole.CUSTOMER, UserRole.PARTNER, UserRole.INTRODUCER].includes(requestUser.role as UserRole);
+
+        if (isRestrictedSelfUpdate) {
+            if (dto.username && dto.username !== user.username) {
+                throw new ForbiddenException('Bạn không có quyền thay đổi tên đăng nhập. Vui lòng liên hệ quản trị viên.');
+            }
+            if (dto.phone_number && dto.phone_number !== user.phone_number) {
+                throw new ForbiddenException('Bạn không có quyền thay đổi số điện thoại. Vui lòng liên hệ quản trị viên.');
+            }
+            if (dto.email && dto.email !== user.email) {
+                throw new ForbiddenException('Bạn không có quyền thay đổi email. Vui lòng liên hệ quản trị viên.');
+            }
+        }
+
         if (dto.username) dto.username = dto.username.replace(/\s+/g, '');
         if (dto.phone_number) dto.phone_number = dto.phone_number.replace(/\s+/g, '');
         if (dto.email) dto.email = dto.email.trim();
+
+        const changes: { field: string; oldValue: string; newValue: string }[] = [];
+        const oldEmail = user.email;
+
+        if (dto.phone_number && dto.phone_number !== user.phone_number) {
+            changes.push({ field: 'phone_number', oldValue: user.phone_number || '', newValue: dto.phone_number });
+        }
+        if (dto.email && dto.email !== user.email) {
+            changes.push({ field: 'email', oldValue: user.email || '', newValue: dto.email });
+        }
 
         const duplicateConditions: any[] = [];
         if (dto.username && dto.username !== user.username) duplicateConditions.push({ username: dto.username, id: Not(id), isDelete: false });
@@ -235,6 +266,15 @@ export class AdminService {
         if (dto.avatar) user.avatar = dto.avatar;
 
         await this.userRepo.save(user);
+
+        if (changes.length > 0 && [UserRole.CUSTOMER, UserRole.PARTNER, UserRole.INTRODUCER].includes(user.role)) {
+            const emailToSend = user.email || oldEmail;
+            if (emailToSend) {
+                this.mailService.sendAccountInfoChangedEmail(emailToSend, user.full_name, changes).catch(err => {
+                    console.error('Failed to send account info changed email:', err);
+                });
+            }
+        }
 
         if ((user.role === UserRole.PARTNER || user.role === UserRole.INTRODUCER) && user.partnerProfile) {
             const profileUpdates: any = {};
@@ -336,6 +376,21 @@ export class AdminService {
             await this.serviceRepo.delete(spIds);
         }
 
+        const partnerTrips = await this.tripRepo.find({
+            where: { partner: { id } },
+            select: ['trip_id']
+        });
+
+        if (partnerTrips.length > 0) {
+            const tripIds = partnerTrips.map(t => t.trip_id);
+
+            await this.pointTxRepo.createQueryBuilder()
+                .delete()
+                .from(PointTransaction)
+                .where("trip_id IN (:...tripIds)", { tripIds })
+                .execute();
+        }
+
         await this.tripRepo.delete({ partner: { id } });
 
         await this.profileRepo.delete({ user: { id } });
@@ -343,6 +398,34 @@ export class AdminService {
         await this.notificationRepo.delete({ user: { id } });
         await this.contractRepo.delete({ user: { id } });
         await this.ticketRepo.delete({ user: { id } });
+
+        await this.messageRepo.delete({ sender: { id } });
+
+        const participations = await this.chatParticipantRepo.find({
+            where: { user: { id } },
+            relations: ['conversation']
+        });
+        const conversationIds = participations.map(p => p.conversation?.id).filter(Boolean);
+
+        await this.chatParticipantRepo.delete({ user: { id } });
+
+        if (conversationIds.length > 0) {
+            for (const convId of conversationIds) {
+                const remainingParticipants = await this.chatParticipantRepo.count({
+                    where: { conversation: { id: convId } }
+                });
+
+                if (remainingParticipants === 0) {
+                    await this.messageRepo.createQueryBuilder()
+                        .delete()
+                        .from(Message)
+                        .where("conversation_id = :convId", { convId })
+                        .execute();
+
+                    await this.conversationRepo.delete(convId);
+                }
+            }
+        }
 
         await this.userRepo.delete(id);
 
