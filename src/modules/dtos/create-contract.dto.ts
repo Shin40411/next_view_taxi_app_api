@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateContractDto {
     @IsString()
@@ -27,9 +27,9 @@ export class CreateContractDto {
     address: string;
 
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     @MaxLength(100)
-    vehicle: string;
+    vehicle?: string;
 
     @IsString()
     @IsNotEmpty()
