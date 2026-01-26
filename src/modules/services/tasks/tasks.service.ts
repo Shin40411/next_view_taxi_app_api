@@ -110,46 +110,61 @@ export class TasksService {
         this.logger.log(`Running daily profile reminder task at ${currentHour}:${currentMinute}...`);
 
         try {
-            const users = await this.userRepository.find({
-                where: [
-                    { role: UserRole.PARTNER, isDelete: false },
-                    { role: UserRole.INTRODUCER, isDelete: false }
-                ],
-                relations: ['partnerProfile'],
-            });
+            const CHUNK_SIZE = 100;
+            let offset = 0;
+            let processedCount = 0;
 
-            for (const user of users) {
-                if (!user.partnerProfile) continue;
+            while (true) {
+                const users = await this.userRepository.find({
+                    where: [
+                        { role: UserRole.PARTNER, isDelete: false },
+                        { role: UserRole.INTRODUCER, isDelete: false }
+                    ],
+                    relations: ['partnerProfile'],
+                    skip: offset,
+                    take: CHUNK_SIZE,
+                });
 
-                if (user.partnerProfile.status === PartnerStatus.APPROVED) continue;
-                if (user.partnerProfile.status === PartnerStatus.REJECTED) continue;
+                if (users.length === 0) break;
 
-                const missingFields: string[] = [];
-                if (!user.email) missingFields.push('Email');
-                if (!user.phone_number) missingFields.push('Số điện thoại');
+                for (const user of users) {
+                    if (!user.partnerProfile) continue;
 
-                if (!user.partnerProfile.id_card_num) missingFields.push('Số CCCD');
-                if (!user.partnerProfile.id_card_front) missingFields.push('Ảnh mặt trước CCCD');
-                if (!user.partnerProfile.id_card_back) missingFields.push('Ảnh mặt sau CCCD');
-                if (!user.partnerProfile.date_of_birth) missingFields.push('Ngày sinh');
-                if (!user.partnerProfile.sex) missingFields.push('Giới tính');
+                    if (user.partnerProfile.status === PartnerStatus.APPROVED) continue;
+                    if (user.partnerProfile.status === PartnerStatus.REJECTED) continue;
 
-                if (user.role === UserRole.PARTNER) {
-                    if (!user.partnerProfile.vehicle_plate) missingFields.push('Biển số xe');
-                    if (!user.partnerProfile.brand) missingFields.push('Hãng taxi');
-                    if (!user.partnerProfile.driver_license_front) missingFields.push('Ảnh mặt trước bằng lái');
-                    if (!user.partnerProfile.driver_license_back) missingFields.push('Ảnh mặt sau bằng lái');
-                }
+                    const missingFields: string[] = [];
+                    if (!user.email) missingFields.push('Email');
+                    if (!user.phone_number) missingFields.push('Số điện thoại');
 
-                if (missingFields.length > 0) {
-                    if (user.email) {
-                        this.logger.log(`Sending reminder to ${user.email} (Missing: ${missingFields.join(', ')})`);
-                        await this.mailService.sendProfileReminderEmail(user.email, user.full_name, missingFields);
-                    } else {
-                        this.logger.warn(`User ${user.id} has missing fields but no email to send reminder.`);
+                    if (!user.partnerProfile.id_card_num) missingFields.push('Số CCCD');
+                    if (!user.partnerProfile.id_card_front) missingFields.push('Ảnh mặt trước CCCD');
+                    if (!user.partnerProfile.id_card_back) missingFields.push('Ảnh mặt sau CCCD');
+                    if (!user.partnerProfile.date_of_birth) missingFields.push('Ngày sinh');
+                    if (!user.partnerProfile.sex) missingFields.push('Giới tính');
+
+                    if (user.role === UserRole.PARTNER) {
+                        if (!user.partnerProfile.vehicle_plate) missingFields.push('Biển số xe');
+                        if (!user.partnerProfile.brand) missingFields.push('Hãng taxi');
+                        if (!user.partnerProfile.driver_license_front) missingFields.push('Ảnh mặt trước bằng lái');
+                        if (!user.partnerProfile.driver_license_back) missingFields.push('Ảnh mặt sau bằng lái');
+                    }
+
+                    if (missingFields.length > 0) {
+                        if (user.email) {
+                            this.logger.log(`Sending reminder to ${user.email} (Missing: ${missingFields.join(', ')})`);
+                            await this.mailService.sendProfileReminderEmail(user.email, user.full_name, missingFields);
+                            processedCount++;
+                        } else {
+                            this.logger.warn(`User ${user.id} has missing fields but no email to send reminder.`);
+                        }
                     }
                 }
+
+                offset += CHUNK_SIZE;
             }
+
+            this.logger.log(`Profile reminder task completed. Processed ${processedCount} users.`);
         } catch (error) {
             this.logger.error('Error running profile reminder task', error.stack);
         }
@@ -161,35 +176,42 @@ export class TasksService {
 
         try {
             const now = new Date();
-            const expiredContracts = await this.contractRepository.createQueryBuilder('contract')
-                .leftJoinAndSelect('contract.user', 'user')
-                .where('contract.status = :status', { status: ContractStatus.ACTIVE })
-                .andWhere('contract.expire_date < :now', { now })
-                .getMany();
+            const CHUNK_SIZE = 100;
+            let offset = 0;
+            let processedCount = 0;
 
-            if (expiredContracts.length === 0) {
-                this.logger.log('No expired contracts found.');
-                return;
-            }
+            while (true) {
+                const expiredContracts = await this.contractRepository.createQueryBuilder('contract')
+                    .leftJoinAndSelect('contract.user', 'user')
+                    .where('contract.status = :status', { status: ContractStatus.ACTIVE })
+                    .andWhere('contract.expire_date < :now', { now })
+                    .skip(offset)
+                    .take(CHUNK_SIZE)
+                    .getMany();
 
-            this.logger.log(`Found ${expiredContracts.length} expired contracts.`);
+                if (expiredContracts.length === 0) break;
 
-            for (const contract of expiredContracts) {
-                if (contract.user && contract.user.email) {
-                    try {
-                        await this.mailService.sendExpiredContract(
-                            contract.user.email,
-                            contract.full_name,
-                            contract.expire_date
-                        );
-                        this.logger.log(`Sent expired contract email to ${contract.user.email}`);
+                for (const contract of expiredContracts) {
+                    if (contract.user && contract.user.email) {
+                        try {
+                            await this.mailService.sendExpiredContract(
+                                contract.user.email,
+                                contract.full_name,
+                                contract.expire_date
+                            );
+                            this.logger.log(`Sent expired contract email to ${contract.user.email}`);
+                            processedCount++;
 
-                    } catch (err) {
-                        this.logger.error(`Failed to send email for contract ${contract.id}`, err.stack);
+                        } catch (err) {
+                            this.logger.error(`Failed to send email for contract ${contract.id}`, err.stack);
+                        }
                     }
                 }
+
+                offset += CHUNK_SIZE;
             }
 
+            this.logger.log(`Contract expiration check completed. Processed ${processedCount} contracts.`);
         } catch (error) {
             this.logger.error('Error running weekly contract expiration check', error.stack);
         }

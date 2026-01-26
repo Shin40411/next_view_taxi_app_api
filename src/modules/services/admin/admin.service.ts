@@ -475,173 +475,52 @@ export class AdminService {
     }
 
     async getPartnerStats(range: string, page: number = 1, limit: number = 10) {
-        const query = this.tripRepo.createQueryBuilder('trip')
-            .leftJoinAndSelect('trip.partner', 'partner')
-            .leftJoinAndSelect('partner.bankAccount', 'bankAccount')
-            .where('trip.status = :status', { status: TripStatus.COMPLETED })
-            .select([
-                'partner.id',
-                'partner.full_name',
-                'bankAccount.bank_name',
-                'bankAccount.account_number',
-                'bankAccount.account_holder_name',
-                'COUNT(trip.trip_id) as totalTrips',
-                'SUM(trip.actual_guest_count) as totalGuests',
-                'SUM(trip.reward_snapshot) as totalPoints'
-            ])
-            .groupBy('partner.id')
-            .addGroupBy('partner.full_name')
-            .addGroupBy('bankAccount.bank_name')
-            .addGroupBy('bankAccount.account_number')
-            .addGroupBy('bankAccount.account_holder_name')
-            .leftJoin('trip.servicePoint', 'servicePoint')
-            .addSelect(
-                `SUM(
-                    (trip.reward_snapshot * COALESCE(servicePoint.discount, 0)) / 
-                    (100 - COALESCE(servicePoint.discount, 0))
-                )`,
-                'totalDiscounted'
-            )
+        const results = await this.tripRepo.query(
+            'CALL sp_get_partner_stats(?, ?, ?)',
+            [range, page, limit > 0 ? limit : 1000]
+        );
 
-        const now = new Date();
-        let startDate: Date | undefined;
-        let endDate: Date | undefined;
+        const data = results[0] || [];
+        const total = data.length > 0 ? Number(data[0].total) : 0;
 
-        switch (range) {
-            case 'today':
-                startDate = new Date(now.setHours(0, 0, 0, 0));
-                endDate = new Date(now.setHours(23, 59, 59, 999));
-                break;
-            case 'yesterday':
-                const yesterday = new Date(now);
-                yesterday.setDate(now.getDate() - 1);
-                startDate = new Date(yesterday.setHours(0, 0, 0, 0));
-                endDate = new Date(yesterday.setHours(23, 59, 59, 999));
-                break;
-            case '7_last_days':
-                const sevenDaysAgo = new Date(now);
-                sevenDaysAgo.setDate(now.getDate() - 7);
-                startDate = new Date(sevenDaysAgo.setHours(0, 0, 0, 0));
-                endDate = new Date();
-                break;
-            case 'this_month':
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                break;
-            default:
-                break;
-        }
-
-        if (startDate && endDate) {
-            query.andWhere('trip.updated_at BETWEEN :startDate AND :endDate', { startDate, endDate });
-        }
-
-        const totalQuery = query.clone();
-        totalQuery.limit(undefined);
-        totalQuery.offset(undefined);
-        const total = (await totalQuery.getRawMany()).length;
-
-        if (limit > 0) {
-            query.skip((page - 1) * limit);
-            query.take(limit);
-        }
-
-        const stats = await query.getRawMany();
-
-        const data = stats.map(stat => ({
-            partnerId: stat.partner_id,
-            partnerName: stat.partner_full_name,
-            totalTrips: Number(stat.totalTrips),
-            totalGuests: Number(stat.totalGuests) || 0,
-            totalPoints: Number(stat.totalPoints) || 0,
-            totalDiscounted: Math.floor(Number(stat.totalDiscounted) || 0),
-            bankName: stat.bankAccount_bank_name || '',
-            accountNumber: stat.bankAccount_account_number || '',
-            accountHolderName: stat.bankAccount_account_holder_name || '',
-        }));
-
-        return { data, total };
+        return {
+            data: data.map((row: any) => ({
+                partnerId: row.partnerId,
+                partnerName: row.partnerName,
+                totalTrips: Number(row.totalTrips),
+                totalGuests: Number(row.totalGuests) || 0,
+                totalPoints: Number(row.totalPoints) || 0,
+                totalDiscounted: Number(row.totalDiscounted) || 0,
+                bankName: row.bankName || '',
+                accountNumber: row.accountNumber || '',
+                accountHolderName: row.accountHolderName || '',
+            })),
+            total
+        };
     }
 
     async getServicePointStats(range: string, page: number = 1, limit: number = 10) {
-        const query = this.tripRepo.createQueryBuilder('trip')
-            .leftJoinAndSelect('trip.servicePoint', 'servicePoint')
-            .leftJoinAndSelect('servicePoint.owner', 'owner')
-            .leftJoinAndSelect('owner.bankAccount', 'bankAccount')
-            .where('trip.status = :status', { status: TripStatus.COMPLETED })
-            .select([
-                'servicePoint.id',
-                'servicePoint.name',
-                'bankAccount.bank_name',
-                'bankAccount.account_number',
-                'bankAccount.account_holder_name',
-                'COUNT(trip.trip_id) as totalTrips',
-                'SUM(trip.actual_guest_count) as totalGuests',
-                'SUM(trip.reward_snapshot) as totalPoints'
-            ])
-            .groupBy('servicePoint.id')
-            .addGroupBy('servicePoint.name')
-            .addGroupBy('bankAccount.bank_name')
-            .addGroupBy('bankAccount.account_number')
-            .addGroupBy('bankAccount.account_holder_name');
+        const results = await this.tripRepo.query(
+            'CALL sp_get_service_point_stats(?, ?, ?)',
+            [range, page, limit > 0 ? limit : 1000]
+        );
 
-        const now = new Date();
-        let startDate: Date | undefined;
-        let endDate: Date | undefined;
+        const data = results[0] || [];
+        const total = data.length > 0 ? Number(data[0].total) : 0;
 
-        switch (range) {
-            case 'today':
-                startDate = new Date(now.setHours(0, 0, 0, 0));
-                endDate = new Date(now.setHours(23, 59, 59, 999));
-                break;
-            case 'yesterday':
-                const yesterday = new Date(now);
-                yesterday.setDate(now.getDate() - 1);
-                startDate = new Date(yesterday.setHours(0, 0, 0, 0));
-                endDate = new Date(yesterday.setHours(23, 59, 59, 999));
-                break;
-            case '7_last_days':
-                const sevenDaysAgo = new Date(now);
-                sevenDaysAgo.setDate(now.getDate() - 7);
-                startDate = new Date(sevenDaysAgo.setHours(0, 0, 0, 0));
-                endDate = new Date();
-                break;
-            case 'this_month':
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                break;
-            default:
-                break;
-        }
-
-        if (startDate && endDate) {
-            query.andWhere('trip.created_at BETWEEN :startDate AND :endDate', { startDate, endDate });
-        }
-
-        const totalQuery = query.clone();
-        totalQuery.limit(undefined);
-        totalQuery.offset(undefined);
-        const total = (await totalQuery.getRawMany()).length;
-
-        if (limit > 0) {
-            query.skip((page - 1) * limit);
-            query.take(limit);
-        }
-
-        const stats = await query.getRawMany();
-
-        const data = stats.map(stat => ({
-            servicePointId: stat.servicePoint_id,
-            servicePointName: stat.servicePoint_name,
-            totalTrips: Number(stat.totalTrips),
-            totalGuests: Number(stat.totalGuests) || 0,
-            totalCost: Number(stat.totalPoints) || 0,
-            bankName: stat.bankAccount_bank_name || '',
-            accountNumber: stat.bankAccount_account_number || '',
-            accountHolderName: stat.bankAccount_account_holder_name || '',
-        }));
-
-        return { data, total };
+        return {
+            data: data.map((row: any) => ({
+                servicePointId: row.servicePointId,
+                servicePointName: row.servicePointName,
+                totalTrips: Number(row.totalTrips),
+                totalGuests: Number(row.totalGuests) || 0,
+                totalCost: Number(row.totalCost) || 0,
+                bankName: row.bankName || '',
+                accountNumber: row.accountNumber || '',
+                accountHolderName: row.accountHolderName || '',
+            })),
+            total
+        };
     }
 
     async changeUserPassword(userId: string, newPassword: string) {

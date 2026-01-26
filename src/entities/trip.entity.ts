@@ -1,9 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn, UpdateDateColumn, Index } from 'typeorm';
 import { User } from './user.entity';
 import { ServicePoint } from './service-point.entity';
 import { TripStatus } from 'src/utils/trips-status-enum';
 
 @Entity('trips')
+@Index(['status', 'updated_at'])
+@Index(['status', 'created_at'])
 export class Trip {
     @PrimaryGeneratedColumn('uuid')
     trip_id: string;
