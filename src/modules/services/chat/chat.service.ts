@@ -303,4 +303,12 @@ export class ChatService {
             { deleted_at: now, messages_cleared_at: now }
         );
     }
+
+    async getParticipantIds(conversationId: string): Promise<string[]> {
+        const participants = await this.chatParticipantRepository.find({
+            where: { conversation_id: conversationId },
+            select: ['user_id']
+        });
+        return participants.map(p => p.user_id);
+    }
 }

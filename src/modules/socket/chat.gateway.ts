@@ -25,9 +25,10 @@ export class ChatGateway {
     @SubscribeMessage('subscribe_all')
     async handleSubscribeAll(@MessageBody('userId') userId: string, @ConnectedSocket() client: Socket) {
         console.log(`Received subscribe_all request from Client ${client.id} for User ${userId}`);
+        client.join(`user:${userId}`);
         const conversations = await this.chatService.getConversations(userId);
         conversations.map(c => client.join(c.id));
-        console.log(`Client ${client.id} (User ${userId}) subscribed to all ${conversations.length} conversations`);
+        console.log(`Client ${client.id} (User ${userId}) subscribed to personal room and ${conversations.length} conversations`);
     }
 
     @SubscribeMessage('send_message')
