@@ -202,21 +202,34 @@ export class ChatService {
         return this.conversationRepository.delete(conversationId);
     }
 
-    async getMessages(conversationId: string, userId: string, limit: number = 50) {
+    async getMessages(conversationId: string, userId: string, limit: number = 10, before?: string, beforeId?: string) {
         const participant = await this.chatParticipantRepository.findOne({
             where: { conversation_id: conversationId, user_id: userId }
         });
 
         if (!participant || participant.deleted_at) {
-            return [];
+            return { results: [], total: 0 };
         }
 
         const queryBuilder = this.messageRepository
             .createQueryBuilder('message')
             .leftJoinAndSelect('message.sender', 'sender')
             .where('message.conversation_id = :conversationId', { conversationId })
-            .orderBy('message.created_at', 'ASC')
+            .orderBy('message.created_at', 'DESC')
+            .addOrderBy('message.id', 'DESC')
             .take(limit);
+
+        if (before) {
+            const beforeDate = new Date(before);
+            if (beforeId) {
+                queryBuilder.andWhere(
+                    '(message.created_at < :before OR (message.created_at = :before AND message.id < :beforeId))',
+                    { before: beforeDate, beforeId }
+                );
+            } else {
+                queryBuilder.andWhere('message.created_at < :before', { before: beforeDate });
+            }
+        }
 
         if (participant.messages_cleared_at) {
             queryBuilder.andWhere('message.created_at > :clearedAt', {
@@ -224,7 +237,21 @@ export class ChatService {
             });
         }
 
-        return queryBuilder.getMany();
+        const [messages, count] = await Promise.all([
+            queryBuilder.getMany(),
+            this.messageRepository
+                .createQueryBuilder('message')
+                .innerJoin('chat_participants', 'cp', 'cp.conversation_id = message.conversation_id')
+                .where('message.conversation_id = :conversationId', { conversationId })
+                .andWhere('cp.user_id = :userId', { userId })
+                .andWhere('(cp.messages_cleared_at IS NULL OR message.created_at > cp.messages_cleared_at)')
+                .getCount()
+        ]);
+
+        return {
+            results: messages.reverse(),
+            total: count
+        };
     }
 
     async createMessage(conversationId: string, userId: string, createMessageDto: CreateMessageDto) {

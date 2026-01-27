@@ -31,8 +31,8 @@ export class ChatController {
     }
 
     @Get(':id/messages')
-    async getMessages(@Param('id', ParseUUIDPipe) id: string, @Request() req, @Query('limit') limit: number) {
-        return this.chatService.getMessages(id, req.user.sub, limit);
+    async getMessages(@Param('id', ParseUUIDPipe) id: string, @Request() req, @Query('limit') limit: number, @Query('before') before: string, @Query('beforeId') beforeId: string) {
+        return this.chatService.getMessages(id, req.user.sub, limit, before, beforeId);
     }
 
     @Post('create')
